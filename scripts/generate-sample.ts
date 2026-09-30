@@ -46,8 +46,8 @@ const clients: Client[] = [
   { name: 'ミドリ薬局', start: 0, issueDay: 31, terms: 30, base: [160000, 220000], pay: () => paid(between(-1, 2)) },
   // 7月から新規、基本は期日内
   { name: 'ネクスト教育', start: 3, issueDay: 10, terms: 45, base: [300000, 380000], pay: () => paid(between(-2, 1)) },
-  // ときどき大きく遅れる：直近2件は現在も遅延中（1〜30日）
-  { name: 'ヤマト商会', start: 0, issueDay: 20, terms: 30, base: [180000, 240000], pay: (i) => (i >= 4 ? { kind: 'unpaid' } : i === 1 ? paid(between(18, 28)) : paid(between(0, 5))) },
+  // 普段は期日どおりだが、5月分が大きく遅れ、7・8月分は現在も遅延中（基準日時点で 42日・11日）
+  { name: 'ヤマト商会', start: 0, issueDay: 20, terms: 30, base: [180000, 240000], pay: (i) => (i >= 3 ? { kind: 'unpaid' } : i === 1 ? paid(between(18, 28)) : paid(between(-2, 0))) },
   // 1件が31〜60日の滞留
   { name: '光洋印刷', start: 0, issueDay: 25, terms: 30, base: [90000, 130000], pay: (i) => (i === 3 ? { kind: 'unpaid' } : i === 2 ? paid(between(10, 20)) : paid(between(0, 6))) },
   // 7月分が期日に一部だけ入金され、残りが滞留

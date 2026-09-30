@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
-  aging, arAt, byClient, byMonth, change, dueThisMonth, prevMonthEnd, rankByDelay, rankByReceivable, summarize,
+  aging, arAt, byClient, byMonth, change, dueThisMonth, prevMonthEnd, rankByDelay, rankByOverdueAmount, rankByReceivable, summarize,
 } from './aggregate'
 import { parseCsv, SAMPLE_AS_OF } from './csv'
 import { statusLabel } from './status'
@@ -63,6 +63,20 @@ describe('byClient / rankByDelay', () => {
   })
   it('遅延ランキングは遅延のない取引先を含めない', () => {
     expect(rankByDelay(clients).map((c) => c.client)).toEqual(['X', 'Z'])
+  })
+  it('回収を急ぐ取引先は現在の遅延残高が大きい順で、現在遅延のない取引先を含めない', () => {
+    // X: 遅延中10万、Z: 遅延中6万、Y: 現在の遅延なし
+    expect(rankByOverdueAmount(clients).map((c) => c.client)).toEqual(['X', 'Z'])
+  })
+  it('遅延回数が同数なら平均遅延日数が長い順', () => {
+    const tie = byClient(
+      [
+        inv({ client: 'P', invoiceNo: '1', paidAmount: 100000, paidDate: '2026-10-02' }), // 2日遅れ
+        inv({ client: 'Q', invoiceNo: '2', paidAmount: 100000, paidDate: '2026-10-08' }), // 8日遅れ
+      ],
+      ASOF,
+    )
+    expect(rankByDelay(tie).map((c) => c.client)).toEqual(['Q', 'P'])
   })
   it('売掛金ランキングは残高の大きい順', () => {
     expect(rankByReceivable(clients).map((c) => c.client)).toEqual(['X', 'Y', 'Z'])
@@ -138,5 +152,14 @@ describe('サンプルデータ全体の整合', () => {
     expect(clients.find((c) => c.client === '丸山製作所')!.lateCount).toBe(0)
     expect(rankByDelay(clients)[0].lateCount).toBeGreaterThanOrEqual(3)
     expect(dueThisMonth(invoices, SAMPLE_AS_OF).length).toBe(s.dueThisMonthCount)
+    // ヤマト商会：普段は期日どおりだが2件が現在遅延中。常に数日遅れる北斗デザインとは別の傾向
+    const yamato = clients.find((c) => c.client === 'ヤマト商会')!
+    const hokuto = clients.find((c) => c.client === '北斗デザイン')!
+    expect(yamato.overdueCount).toBe(2)
+    expect(yamato.maxOverdueDays).toBe(42)
+    expect(yamato.lateCount).toBeLessThan(hokuto.lateCount)
+    expect(yamato.avgLateDays).not.toBeCloseTo(hokuto.avgLateDays!, 0)
+    // 回収を急ぐ順の先頭は東和建設
+    expect(rankByOverdueAmount(clients)[0].client).toBe('東和建設')
   })
 })

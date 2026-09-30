@@ -5,6 +5,15 @@ import { byClient } from '../lib/aggregate'
 import { num, pct, yen, yenShort } from '../lib/format'
 import { Card, td, tdR, th, thR } from './ui'
 
+function Stat({ label, value, bad = false }: { label: string; value: string; bad?: boolean }) {
+  return (
+    <div>
+      <dt className="text-[10px] text-muted">{label}</dt>
+      <dd className={`text-sm ${bad ? 'font-bold text-overdue' : ''}`}>{value}</dd>
+    </div>
+  )
+}
+
 export default function ClientView({ invoices, asOf }: { invoices: Invoice[]; asOf: string }) {
   const clients = useMemo(() => byClient(invoices, asOf).sort((a, b) => b.ar - a.ar), [invoices, asOf])
   const chart = clients
@@ -30,7 +39,37 @@ export default function ClientView({ invoices, asOf }: { invoices: Invoice[]; as
       </Card>
 
       <Card title="取引先ごとの状況" note="遅延回数＝遅れて入金された請求書と、現在遅延中の請求書の合計">
-        <div className="-mx-3 mt-2 overflow-x-auto sm:-mx-4">
+        <ul className="mt-3 space-y-2 md:hidden">
+          {clients.map((c) => (
+            <li
+              key={c.client}
+              className={`rounded-lg border border-line p-3 ${c.overdueAmount > 0 ? 'bg-overdue-soft' : 'bg-card'}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold">{c.client}</div>
+                  {c.hasPartialOverdue && (
+                    <span className="mt-1 inline-block rounded bg-overdue/15 px-1.5 py-0.5 text-[10px] font-bold text-overdue ring-1 ring-amber">
+                      一部入金・遅延
+                    </span>
+                  )}
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-[10px] text-muted">売掛金残高</div>
+                  <div className="font-bold">{yen(c.ar)}</div>
+                </div>
+              </div>
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                <Stat label="うち遅延" value={yen(c.overdueAmount)} bad={c.overdueAmount > 0} />
+                <Stat label="最大遅延" value={c.maxOverdueDays > 0 ? `${num(c.maxOverdueDays)}日` : '—'} />
+                <Stat label="遅延回数" value={`${c.lateCount}/${c.evaluableCount}件（${pct(c.lateRate)}）`} />
+                <Stat label="平均遅延日数" value={c.avgLateDays === null ? '—' : `${c.avgLateDays.toFixed(1)}日`} />
+              </dl>
+            </li>
+          ))}
+        </ul>
+
+        <div className="-mx-4 mt-2 hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead className="bg-paper text-xs text-muted">
               <tr>

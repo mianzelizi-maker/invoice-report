@@ -4,7 +4,7 @@ import {
 } from 'recharts'
 import type { Invoice } from '../types'
 import {
-  aging, arAt, byClient, byMonth, change, dueThisMonth, prevMonthEnd, rankByDelay, receivable, summarize,
+  aging, arAt, byClient, byMonth, change, dueThisMonth, prevMonthEnd, rankByDelay, rankByOverdueAmount, receivable, summarize,
 } from '../lib/aggregate'
 import { dateLabel, num, pct, yen, yenShort } from '../lib/format'
 import { Card, Kpi, StatusBadge } from './ui'
@@ -14,12 +14,14 @@ const AGING_COLOR = ['#2c3e66', '#c98a1b', '#d9622b', '#c2412d']
 export default function Overview({ invoices, asOf }: { invoices: Invoice[]; asOf: string }) {
   const d = useMemo(() => {
     const s = summarize(invoices, asOf)
+    const clients = byClient(invoices, asOf)
     return {
       s,
       prevAr: arAt(invoices, prevMonthEnd(asOf)),
       aging: aging(invoices, asOf),
       months: byMonth(invoices, asOf),
-      worst: rankByDelay(byClient(invoices, asOf), 5),
+      urgent: rankByOverdueAmount(clients, 5),
+      worst: rankByDelay(clients, 5),
       due: dueThisMonth(invoices, asOf),
     }
   }, [invoices, asOf])
@@ -86,9 +88,30 @@ export default function Overview({ invoices, asOf }: { invoices: Invoice[]; asOf
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="遅延が多い取引先" note="遅れて入金された分と、現在の遅延を合わせた回数順">
+        <Card title="回収を急ぐべき取引先" note="並び順：現在遅延中の残高が大きい順">
+          {d.urgent.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">現在遅延中の取引先はありません。</p>
+          ) : (
+            <ul className="mt-2 divide-y divide-line">
+              {d.urgent.map((c) => (
+                <li key={c.client} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">{c.client}</div>
+                    <div className="text-xs text-muted">
+                      遅延中 {c.overdueCount}件 ・ 最大{num(c.maxOverdueDays)}日
+                      {c.hasPartialOverdue && <span className="ml-1 text-amber">・一部入金のうえ遅延</span>}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right font-bold text-overdue">{yen(c.overdueAmount)}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card title="支払いが遅れがちな取引先" note="並び順：遅延回数が多い順（同数なら平均遅延日数が長い順）">
           {d.worst.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">遅延のある取引先はありません。</p>
+            <p className="mt-3 text-sm text-muted">遅延の履歴がある取引先はありません。</p>
           ) : (
             <ul className="mt-2 divide-y divide-line">
               {d.worst.map((c) => (
@@ -96,13 +119,12 @@ export default function Overview({ invoices, asOf }: { invoices: Invoice[]; asOf
                   <div className="min-w-0">
                     <div className="truncate font-semibold">{c.client}</div>
                     <div className="text-xs text-muted">
-                      遅延 {c.lateCount}/{c.evaluableCount}件 ・ 平均 {Math.round(c.avgLateDays ?? 0)}日
-                      {c.hasPartialOverdue && <span className="ml-1 text-amber">・一部入金のうえ遅延</span>}
+                      遅延率 {pct(c.lateRate)} ・ 平均 {Math.round(c.avgLateDays ?? 0)}日遅れ
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
-                    <div className={c.overdueAmount > 0 ? 'font-bold text-overdue' : 'text-muted'}>{yen(c.overdueAmount)}</div>
-                    <div className="text-xs text-muted">{c.maxOverdueDays > 0 ? `最大${num(c.maxOverdueDays)}日遅延中` : '現在の遅延なし'}</div>
+                    <span className="font-bold">{c.lateCount}</span>
+                    <span className="text-xs text-muted"> / {c.evaluableCount}件が遅延</span>
                   </div>
                 </li>
               ))}
@@ -110,7 +132,7 @@ export default function Overview({ invoices, asOf }: { invoices: Invoice[]; asOf
           )}
         </Card>
 
-        <Card title="今月の回収予定" note={`${asOf.slice(0, 4)}年${Number(asOf.slice(5, 7))}月が期日で未回収の請求書`}>
+        <Card className="lg:col-span-2" title="今月の回収予定" note={`${asOf.slice(0, 4)}年${Number(asOf.slice(5, 7))}月が期日で未回収の請求書`}>
           {d.due.length === 0 ? (
             <p className="mt-3 text-sm text-muted">今月が期日の未回収請求書はありません。</p>
           ) : (

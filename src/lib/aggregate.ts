@@ -92,7 +92,15 @@ export function byClient(invoices: Invoice[], asOf: string): ClientSummary[] {
   })
 }
 
-/** 遅延が多い順（遅延件数 → 平均遅延日数 → 遅延残高）。遅延が一度もない取引先は除く */
+/** 回収を急ぐべき取引先：現在遅延中の残高が大きい順。現在の遅延がない取引先は除く */
+export function rankByOverdueAmount(clients: ClientSummary[], limit = 5): ClientSummary[] {
+  return clients
+    .filter((c) => c.overdueAmount > 0)
+    .sort((a, b) => b.overdueAmount - a.overdueAmount || b.maxOverdueDays - a.maxOverdueDays)
+    .slice(0, limit)
+}
+
+/** 支払いが遅れがちな取引先：遅延回数が多い順（同数なら平均遅延日数が長い順）。遅延が一度もない取引先は除く */
 export function rankByDelay(clients: ClientSummary[], limit = 5): ClientSummary[] {
   return clients
     .filter((c) => c.lateCount > 0)
