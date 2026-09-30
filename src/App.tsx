@@ -9,6 +9,7 @@ import InvoiceList from './components/InvoiceList'
 import ClientView from './components/ClientView'
 import ImportView from './components/ImportView'
 import ReportView from './components/ReportView'
+import IssueView from './components/IssueView'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -43,6 +44,12 @@ export default function App() {
     setView('overview')
   }
 
+  // 発行した請求書を請求データに追加する（売掛金・回収予定に反映される）
+  const handleIssued = (inv: Invoice) => {
+    setInvoices((prev) => [...(prev ?? []), inv])
+    setSource((s) => s ?? '発行した請求書')
+  }
+
   const nav = { view, onChange: setView, disabled: invoices === null }
 
   return (
@@ -51,7 +58,9 @@ export default function App() {
       <div className="min-w-0 flex-1">
         <TopBar asOf={asOf} onAsOfChange={setAsOf} onSample={handleSample} loading={loading} hasData={invoices !== null} source={invoices && source ? `${source}（${invoices.length}件）` : null} />
         <main className="mx-auto max-w-5xl px-4 pt-4 pb-24 md:pb-8">
-          {view === 'import' ? (
+          {view === 'issue' ? (
+            <IssueView invoices={invoices} defaultDate={asOf} onIssued={handleIssued} />
+          ) : view === 'import' ? (
             <ImportView current={invoices && source ? { label: source, count: invoices.length } : null} onImport={handleImport} />
           ) : !invoices ? (
             <EmptyState onSample={handleSample} onImport={() => setView('import')} loading={loading} error={error} />
