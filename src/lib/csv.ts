@@ -142,12 +142,17 @@ export function parseCsv(text: string): ParseResult {
     }
 
     let paidAmount = 0
+    let paidAmountBroken = false // 入金額そのものが誤りのとき、そこから派生する指摘は重ねない
     const rawPaid = get('paidAmount')
     if (rawPaid !== '') {
       const p = parseYen(rawPaid)
-      if (p === null) issue(line, LABEL.paidAmount, '入金額が数値ではありません', rawPaid)
-      else if (p < 0) issue(line, LABEL.paidAmount, '入金額は0以上にしてください', rawPaid)
-      else paidAmount = p
+      if (p === null) {
+        issue(line, LABEL.paidAmount, '入金額が数値ではありません', rawPaid)
+        paidAmountBroken = true
+      } else if (p < 0) {
+        issue(line, LABEL.paidAmount, '入金額は0以上にしてください', rawPaid)
+        paidAmountBroken = true
+      } else paidAmount = p
     }
 
     // 項目どうしの整合
@@ -160,7 +165,7 @@ export function parseCsv(text: string): ParseResult {
     if (paidAmount > 0 && rawPaid !== '' && !get('paidDate')) {
       issue(line, LABEL.paidDate, '入金額があるのに入金日が空です')
     }
-    if (get('paidDate') && paidDate && paidAmount === 0) {
+    if (get('paidDate') && paidDate && paidAmount === 0 && !paidAmountBroken) {
       issue(line, LABEL.paidAmount, '入金日があるのに入金額が空か0です')
     }
     if (issueDate && paidDate && paidDate < issueDate) {

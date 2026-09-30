@@ -37,7 +37,7 @@ export default function App() {
   // CSVを取り込んだら、今日を基準日にして概要画面へ
   const handleImport = (data: Invoice[], label: string) => {
     setInvoices(data)
-    setSource(`${label}（${data.length}件）`)
+    setSource(label)
     setAsOf(today())
     setView('overview')
   }
@@ -48,7 +48,7 @@ export default function App() {
     <div className="min-h-screen md:flex">
       <Sidebar {...nav} />
       <div className="min-w-0 flex-1">
-        <TopBar asOf={asOf} onAsOfChange={setAsOf} onSample={handleSample} loading={loading} hasData={invoices !== null} source={source} />
+        <TopBar asOf={asOf} onAsOfChange={setAsOf} onSample={handleSample} loading={loading} hasData={invoices !== null} source={invoices && source ? `${source}（${invoices.length}件）` : null} />
         <main className="mx-auto max-w-5xl px-4 pt-4 pb-24 md:pb-8">
           {view === 'import' ? (
             <ImportView current={invoices && source ? { label: source, count: invoices.length } : null} onImport={handleImport} />
