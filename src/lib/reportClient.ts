@@ -5,7 +5,14 @@ export type AiStatus =
   | { available: true; remaining: number; limit: number }
   | { available: false; reason: 'unavailable' | 'limit' | 'error' }
 
+/**
+ * AI生成を使うかどうかは、ビルド時の設定（VITE_ENABLE_AI=true）で決める。既定は「使わない」。
+ * 使わない設定のときは、サーバーへ通信もしない（GitHub Pagesのような静的な公開でも、余計な通信が出ない）。
+ */
+export const AI_ENABLED = import.meta.env.VITE_ENABLE_AI === 'true'
+
 export async function fetchAiStatus(signal?: AbortSignal): Promise<AiStatus> {
+  if (!AI_ENABLED) return { available: false, reason: 'unavailable' }
   try {
     const res = await fetch('/api/insights', { signal })
     // ローカル実行（npm run dev）では /api が無く、index.html が返る
@@ -23,6 +30,7 @@ export type AiResult =
   | { ok: false; reason: 'limit' | 'unavailable' | 'error' }
 
 export async function requestAiReport(data: ReportData): Promise<AiResult> {
+  if (!AI_ENABLED) return { ok: false, reason: 'unavailable' }
   try {
     const res = await fetch('/api/insights', {
       method: 'POST',

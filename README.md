@@ -4,6 +4,7 @@
 ログインやデータベースは不要で、ブラウザだけで動きます。
 
 - 公開URL：（公開後に記載）
+- 開発概要ページ：（公開後に記載）
 - ソースコード：https://github.com/mianzelizi-maker/invoice-report
 - サンプルデータ入り：画面の「サンプルデータで試す」ボタンですぐに動作を確認できます
 
@@ -27,7 +28,7 @@
 | **入金状況の自動判定** | 入金済み／一部入金／未入金／支払遅延を自動判定し、遅延日数を計算。一部入金のうえ遅延している請求書は「一部入金・遅延」と表示 |
 | **ダッシュボード** | 売掛金残高・今月の回収予定・遅延額・回収率、年齢別残高、月別の請求・入金・売掛金の推移。「回収を急ぐべき取引先」と「支払いが遅れがちな取引先」を分けて表示 |
 | **請求書一覧・取引先別** | 状態や取引先で絞り込み・並び替え。遅延を色で強調。PCは表、スマホはカード表示 |
-| **月次レポート** | 集計結果を文章にする。**APIキーがなくても動く「自動集計」**と、Claude API による「AI生成」を選べ、どちらの文章かを画面に表示。AIは1日の利用回数に上限あり |
+| **月次レポート** | 集計結果を文章にする。**APIキーがなくても動く「自動集計」**と、Claude API による「AI生成」を選べ、どちらの文章かを画面に表示。AIは1日の利用回数に上限あり（**現在の公開版は自動集計のみ**） |
 | **請求書PDFの発行** | 宛先・明細・税率（10%／軽減8%／非課税）を入力して、日本語のPDFを出力。請求番号の自動採番、小計・消費税・合計の計算、発行日・支払期日の記載。宛先はフリガナ・かな・全半角の違いを区別せず検索できる |
 
 スマートフォンでも見やすいよう、PCは左サイドバー、スマホは下部タブバーで操作します。
@@ -41,9 +42,9 @@
 | CSV | PapaParse（文字コードは UTF-8 → Shift_JIS の順に判定） |
 | PDF | @react-pdf/renderer ／ 日本語フォント Noto Sans JP（SIL OFL、サブセット） |
 | AI | Claude API（`@anthropic-ai/sdk`、既定モデル Claude Haiku 4.5） |
-| サーバー側 | Vercel Functions（APIキーをここだけに置く）／ Upstash Redis（1日の利用回数の記録） |
+| サーバー側（AI生成用・現在の公開版では未使用） | Vercel Functions（APIキーをここだけに置く）／ Upstash Redis（1日の利用回数の記録） |
 | テスト | Vitest（自動テスト129件） |
-| 公開 | GitHub ／ Vercel |
+| 公開 | GitHub ／ GitHub Pages（AI生成を使う場合は Vercel） |
 
 ## 工夫した点
 
@@ -104,14 +105,16 @@ npm run dev
 |---|---|
 | `npm test` | 自動テストを実行する（129件） |
 | `npm run build` | 公開用のファイルを作る（`dist` フォルダ） |
+| `npm run deploy:pages` | GitHub Pages 用にビルドして、`gh-pages` ブランチへ送る |
 | `npm run sample` | サンプルCSV（`public/sample.csv`）を作り直す |
 
-> パソコン上（`npm run dev`）では、月次レポートは「自動集計」の文章だけが表示されます。AI生成は、公開後に、Vercel で設定したときだけ使えます。
+> パソコン上（`npm run dev`）でも、公開版と同じく、月次レポートは「自動集計」の文章だけが表示されます。
 
-## 公開手順（初心者向け）
+## 公開手順（GitHub Pages・初心者向け）
 
-作業の流れは「① GitHubにアップロード → ② Vercelで公開 → ③（任意）AIレポートを有効にする」です。
-**③をしなくても、②までで公開できます**（その場合、月次レポートは「自動集計」の文章だけが表示されます）。
+このアプリは **GitHub Pages**（GitHub が無料で提供する静的サイトの公開機能）で公開しています。
+作業の流れは「① GitHubにアップロード → ② GitHub Pagesで公開」です。
+**現在の公開版はAIを使わず、月次レポートは「自動集計」の文章だけで動きます**（AIを使う方法は、後半の「AI生成を公開版で使う場合（将来）」に残してあります）。
 画面の名前や場所は、各サービスの更新で少し変わることがあります。
 
 ### ① GitHub にアップロードする
@@ -133,16 +136,43 @@ git push -u origin main
 git ls-files | findstr env
 ```
 
-### ② Vercel で公開する
+### ② GitHub Pages で公開する
+
+公開用のファイルを作って、`gh-pages` というブランチに送るだけです。
+
+1. このフォルダのターミナルで、次を実行する（公開用のビルドと送信を、まとめて行います。初回は数分かかることがあります）
+
+```
+npm run deploy:pages
+```
+
+2. GitHub の `invoice-report` のページを開き、「Settings」→ 左メニューの「Pages」を開く
+3. 「Build and deployment」の「Source」を **Deploy from a branch** にして、Branch に **`gh-pages`**、フォルダは **`/ (root)`** を選び、「Save」を押す
+4. 1〜2分待つと、Pages の画面の上部に公開URLが表示される。このアプリの場合は `https://あなたのユーザー名.github.io/invoice-report/` になる
+5. 開発概要ページも、同じ場所の `overview.html` で公開される（`https://あなたのユーザー名.github.io/invoice-report/overview.html`）
+
+**内容を更新したとき**は、変更を `git push` したあとに、もう一度 `npm run deploy:pages` を実行すると、公開内容が入れ替わります。
+
+> `npm run deploy:pages` は、`--base=/invoice-report/` を付けて公開用にビルドし（サイトが `…/invoice-report/` という場所にあるため）、
+> 開発概要ページなどを加えたうえで、`gh-pages` ブランチへ送ります（`package.json` の `build:pages`・`deploy:pages` を参照）。
+
+## AI生成を公開版で使う場合（将来）
+
+現在の公開版（GitHub Pages）は、サーバーを持てない静的サイトなので、AI生成は使えません。AI生成を公開版で使うには、
+サーバー側の関数（`api/`）を動かせる場所（例：Vercel）と、次の設定が必要です。
+（AIを使う方法は、あとで検討する予定です。以下は、そのときの手順です。）
+
+- ビルド時の設定 `VITE_ENABLE_AI=true`（これがないと、画面はAIを使わない動作のままです）
+- 環境変数：`ANTHROPIC_API_KEY`、`UPSTASH_REDIS_REST_URL`、`UPSTASH_REDIS_REST_TOKEN`
+
+### Vercel で公開する（AIを使う場合）
 
 1. [Vercel](https://vercel.com/) を開き、「Continue with GitHub」でログインする
 2. 「Add New… → Project」を選び、`invoice-report` の右の「Import」を押す
 3. 「Framework Preset」が **Vite** になっていることを確認し、そのまま「Deploy」を押す（1〜2分）
-4. 完了すると `https://invoice-report-xxxx.vercel.app` のような URL が発行される。これが公開URL
+4. 完了すると `https://invoice-report-xxxx.vercel.app` のような URL が発行される
 
-以降は、`git push` するたびに自動で公開内容が更新されます。
-
-### ③（任意）AIレポートを有効にする
+### AIレポートを有効にする
 
 AI生成には、**Claude API のキー**と、**利用回数を数えるデータベース（Upstash）**の両方が必要です。
 どちらかが欠けていると、安全のためAI生成は使えません（自動集計は使えます）。
@@ -185,6 +215,7 @@ Claude API は、Claude.ai の有料プランとは**別の課金**です。使�
 | `ANTHROPIC_API_KEY` | A でコピーした `sk-ant-…` |
 | `UPSTASH_REDIS_REST_URL` | B でコピーした URL |
 | `UPSTASH_REDIS_REST_TOKEN` | B でコピーしたトークン |
+| `VITE_ENABLE_AI` | `true`（画面側でAIを使う設定。**これを入れて再デプロイしないと、ボタンは出ません**） |
 
    （必要なら `AI_DAILY_LIMIT_PER_IP`（1人1日あたりの回数、既定3）、`AI_DAILY_LIMIT_TOTAL`（全体の回数、既定30）、`AI_MODEL`（モデル、既定 `claude-haiku-4-5`）も追加できます）
 
@@ -259,6 +290,8 @@ Claude API は、Claude.ai の有料プランとは**別の課金**です。使�
 ### 月次レポート
 
 「月次レポート」画面で、集計結果を文章にします。画面には **どちらで作られた文章か** を必ず表示します。
+
+> **現在の公開版（GitHub Pages）は「自動集計」のみ**で、AI生成は使いません（ビルド時に `VITE_ENABLE_AI=true` を付けたときだけ、画面がAIを使う動作になります）。以下は、AI生成を使う場合の仕様です。
 
 | 表示 | 中身 |
 |---|---|

@@ -284,7 +284,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
       </div>
       <div class="feature-card">
         <div class="k">月次レポート</div>
-        <div class="v">集計結果を文章に。APIキーがなくても動く「自動集計」と、Claude APIによる「AI生成」を選べ、どちらの文章かを画面に表示。</div>
+        <div class="v">集計結果を文章に。APIキーがなくても動く「自動集計」と、Claude APIによる「AI生成」を選べ、どちらの文章かを画面に表示（現在の公開版は自動集計のみ）。</div>
       </div>
       <div class="feature-card">
         <div class="k">請求書PDFの発行</div>
@@ -307,11 +307,11 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
       <span class="stack-chip">Recharts</span>
       <span class="stack-chip">PapaParse(CSV)</span>
       <span class="stack-chip">@react-pdf/renderer + Noto Sans JP(PDF)</span>
-      <span class="stack-chip">Claude API(Haiku 4.5)</span>
-      <span class="stack-chip">Vercel Functions</span>
+      <span class="stack-chip">Claude API(Haiku 4.5・AI生成用)</span>
+      <span class="stack-chip">Vercel Functions(AI生成用)</span>
       <span class="stack-chip">Upstash Redis(利用回数の記録)</span>
       <span class="stack-chip">Vitest(自動テスト129件)</span>
-      <span class="stack-chip">GitHub / Vercel</span>
+      <span class="stack-chip">GitHub / GitHub Pages</span>
     </div>
   </section>
 
@@ -346,6 +346,7 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
         <li>データはブラウザの中だけで扱い、再読み込みで消える（発行元の情報と発行履歴のみ、このブラウザに保存）</li>
         <li>入金は1請求書につき1回分で、分割入金の履歴は持てない</li>
         <li>請求書は適格請求書の主な記載事項を備えるが、あらゆる書式要件を網羅したものではない</li>
+        <li>現在の公開版（GitHub Pages）は静的サイトのため、AI生成は使わず「自動集計」の文章のみ（AI生成用のサーバー側の仕組みは実装済み）</li>
         <li>AI生成の文章は誤りを含む可能性があり、数値は集計と照合する前提。数万件を超える大量データは未検証</li>
       </ul>
       <p>今後は、ログインとデータベースによる複数人・複数端末での利用、分割入金と入金の消込、督促メール文面の下書き、会計ソフトや銀行データとの連携、請求書の履歴管理と再発行を検討しています。</p>

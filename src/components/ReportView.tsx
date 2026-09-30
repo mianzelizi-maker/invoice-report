@@ -7,7 +7,7 @@ import { Card, Kpi } from './ui'
 
 const NOTICE = {
   limit: '本日のAI生成の利用上限に達しました。自動集計の文章を表示しています。',
-  unavailable: 'AI生成は、この環境では利用できません（未設定またはローカル実行）。自動集計の文章を表示しています。',
+  unavailable: 'AI生成は、この環境では利用できません。自動集計の文章を表示しています。',
   error: 'AIの文章を作成できませんでした。自動集計の文章を表示しています。',
 } as const
 
@@ -133,7 +133,7 @@ export default function ReportView({ invoices, asOf }: { invoices: Invoice[]; as
           ? `AI生成を使うと、集計結果（取引先名・金額など）が Anthropic の API に送信されます（個別の請求書明細は送りません）。本日あと ${status.remaining} 回（1日${status.limit}回まで）。`
           : status?.available === false && status.reason === 'limit'
             ? '本日のAI生成の利用上限に達しています。自動集計の文章はいつでも使えます。'
-            : 'このページではAI生成は使えません（未設定またはローカル実行）。自動集計の文章はいつでも使えます。'}
+            : 'この公開版では、AI生成は使えません（自動集計のみ）。自動集計の文章はいつでも使えます。'}
       </p>
     </div>
   )
