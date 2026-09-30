@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  cleanText, createUpstashLimiter, dayKey, handleGenerate, handleStatus, MAX_BODY_CHARS, sanitizeFacts,
+  DEFAULT_MODEL, cleanText, createUpstashLimiter, dayKey, handleGenerate, handleStatus, MAX_BODY_CHARS, sanitizeFacts,
   type Deps, type Env, type Limiter,
 } from './_core'
 
@@ -155,17 +155,18 @@ describe('Claudeの結果の扱い', () => {
     expect(r.body).toMatchObject({ text: expect.stringContaining('テスト'), remaining: 2 })
   })
   it('プロンプトには検証済みの集計値だけが入り、モデル名は環境変数で切り替えられる', async () => {
-    const { d, callClaude } = deps({ env: { AI_MODEL: 'claude-haiku-4-5' } })
+    const { d, callClaude } = deps({ env: { AI_MODEL: 'claude-sonnet-5-5' } })
     await handleGenerate(d, 'v1', body())
     const arg = (callClaude.mock.calls as unknown as [{ system: string; user: string; model: string }][])[0][0]
-    expect(arg.model).toBe('claude-haiku-4-5')
+    expect(arg.model).toBe('claude-sonnet-5-5')
     expect(arg.user).toContain('東和建設')
     expect(arg.system).toContain('集計結果にない数値')
   })
-  it('既定のモデルは claude-opus-5-5', async () => {
+  it('既定のモデルは claude-haiku-4-5', async () => {
     const { d, callClaude } = deps()
     await handleGenerate(d, 'v1', body())
-    expect((callClaude.mock.calls as unknown as [{ model: string }][])[0][0].model).toBe('claude-opus-5-5')
+    expect((callClaude.mock.calls as unknown as [{ model: string }][])[0][0].model).toBe('claude-haiku-4-5')
+    expect(DEFAULT_MODEL).toBe('claude-haiku-4-5')
   })
   it('拒否・空の応答・API障害は 502（画面側はルールベースに切り替える）', async () => {
     for (const impl of [

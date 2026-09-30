@@ -42,7 +42,7 @@ export type Facts = {
 }
 
 export const MAX_BODY_CHARS = 8000
-const DEFAULT_MODEL = 'claude-opus-5-5'
+export const DEFAULT_MODEL = 'claude-haiku-4-5'
 const DEFAULT_LIMIT_PER_VISITOR = 3
 const DEFAULT_LIMIT_TOTAL = 30
 

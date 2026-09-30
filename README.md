@@ -83,8 +83,115 @@ APIキーは **Vercel の環境変数だけ** に置きます（`.env.example` �
 6. **緊急停止スイッチ**：環境変数 `AI_ENABLED=false` で即座にAIを止められる
 7. （念のため）Anthropic Console 側で、APIキーに **月の利用額の上限** を設定しておく
 
-1回あたりの目安は、入力約1.5千トークン＋出力（思考を含む）最大4千トークンで、Claude Opus 5.5 なら最大でも1回あたり数円〜十数円程度。
-サービス全体で1日30回なので、最悪でも1日あたり数百円に収まる設計です。費用をさらに抑えたい場合は、環境変数 `AI_MODEL=claude-haiku-4-5` で軽量モデルに切り替えられます。
+使うモデルは、既定で軽量・低コストの **Claude Haiku 4.5**（`claude-haiku-4-5`）です。環境変数 `AI_MODEL` で変更できます。
+
+1回あたりの目安は、入力が約1.5千トークン、出力が最大1.5千トークンで、約1円（最大でも2円弱）です。
+サービス全体で1日30回までなので、最悪でも **1日あたり約50円、1か月で約1,500円** に収まる設計です（実際の利用は通常これよりずっと少なくなります）。
+
+## 公開手順（初心者向け）
+
+作業の流れは「① GitHubにアップロード → ② Vercelで公開 → ③（任意）AIレポートを有効にする」です。
+**③をしなくても、②までで公開できます**（その場合、月次レポートは「自動集計」の文章だけが表示されます）。
+画面の名前や場所は、各サービスの更新で少し変わることがあります。
+
+### ① GitHub にアップロードする
+
+1. [GitHub](https://github.com/) のアカウントを作り、右上の「＋」→「New repository」を選ぶ
+2. Repository name に `invoice-report` などと入力する。**「Add a README file」などのチェックは入れない**（空のまま）。「Create repository」を押す
+3. 作成後に表示される URL（`https://github.com/あなたのユーザー名/invoice-report.git`）をコピーする
+4. このフォルダでターミナルを開き、次を1行ずつ実行する（1回目のコミットはすでにできています）
+
+```
+git remote add origin https://github.com/あなたのユーザー名/invoice-report.git
+git branch -M main
+git push -u origin main
+```
+
+5. **APIキーが含まれていないか確認する**。次を実行して、表示が `.env.example` だけ（または何も出ない）であればOK
+
+```
+git ls-files | findstr env
+```
+
+### ② Vercel で公開する
+
+1. [Vercel](https://vercel.com/) を開き、「Continue with GitHub」でログインする
+2. 「Add New… → Project」を選び、`invoice-report` の右の「Import」を押す
+3. 「Framework Preset」が **Vite** になっていることを確認し、そのまま「Deploy」を押す（1〜2分）
+4. 完了すると `https://invoice-report-xxxx.vercel.app` のような URL が発行される。これが公開URL
+
+以降は、`git push` するたびに自動で公開内容が更新されます。
+
+### ③（任意）AIレポートを有効にする
+
+AI生成には、**Claude API のキー**と、**利用回数を数えるデータベース（Upstash）**の両方が必要です。
+どちらかが欠けていると、安全のためAI生成は使えません（自動集計は使えます）。
+
+#### A. Claude Console で APIキーを作る
+
+Claude API は、Claude.ai の有料プランとは**別の課金**です。使った分だけの従量課金（前払い）です。
+
+1. [Claude Console](https://console.anthropic.com/) を開く（`platform.claude.com` に移る場合があります）。メールアドレスなどでアカウントを作り、ログインする
+2. 左のメニューの「Billing（請求）」を開き、クレジットを購入する。**最初は5ドルで十分**です。自動でチャージする設定（Auto reload）は、**オフのまま**にしておく
+3. 「Limits（制限）」の項目で、**月の利用上限額**を設定する（例：5ドル）。これがいちばん確実な安全装置になります
+4. 「API keys」を開き、「Create Key」を押す。名前は `invoice-report` などにして作成する
+5. **表示された `sk-ant-` で始まるキーをコピーして、すぐに安全な場所（パスワード管理アプリなど）に保存する**。この画面を閉じると、二度と全体を見ることはできません
+
+> **キーの扱い（重要）**：キーはパスワードと同じです。README・ソースコード・GitHub・チャット・スクリーンショットに**絶対に貼らないでください**。
+> 万一、公開してしまったら、Console の API keys で**すぐにそのキーを削除（Delete）**し、新しく作り直してください。
+
+#### B. Upstash で「1日の利用回数」を数えるデータベースを作る
+
+これは、AIの使いすぎを防ぐために、利用回数を記録する小さなデータベースです（無料枠で足ります）。
+
+1. [Upstash](https://upstash.com/) を開き、GitHub や Google でサインアップ／ログインする
+2. 「Redis」→「Create Database」を押す
+3. 次のように入力して「Create」を押す
+   - Name：`invoice-report-limit`（好きな名前でOK）
+   - Type：Regional
+   - Region：日本に近い `ap-northeast-1`（Tokyo）
+   - Plan：**Free**
+4. 作成された画面の「**REST API**」の欄に、次の2つが表示されている。どちらも後で使うのでコピーしておく
+   - `UPSTASH_REDIS_REST_URL`（`https://` で始まる）
+   - `UPSTASH_REDIS_REST_TOKEN`（長い文字列。キーと同じく**他人に見せない**）
+
+#### C. Vercel に設定を登録する
+
+1. Vercel でこのプロジェクトを開き、上のメニューの「Settings」→「Environment Variables」を開く
+2. 次の3つを1つずつ追加する（Name と Value を入力して「Save」）
+
+| Name | Value |
+|---|---|
+| `ANTHROPIC_API_KEY` | A でコピーした `sk-ant-…` |
+| `UPSTASH_REDIS_REST_URL` | B でコピーした URL |
+| `UPSTASH_REDIS_REST_TOKEN` | B でコピーしたトークン |
+
+   （必要なら `AI_DAILY_LIMIT_PER_IP`（1人1日あたりの回数、既定3）、`AI_DAILY_LIMIT_TOTAL`（全体の回数、既定30）、`AI_MODEL`（モデル、既定 `claude-haiku-4-5`）も追加できます）
+
+3. **登録しただけでは反映されません**。「Deployments」を開き、いちばん上のデプロイの「…」→「Redeploy」を押して、再デプロイする
+
+#### D. 動作を確認する
+
+1. ブラウザで `公開URL/api/insights`（例：`https://invoice-report-xxxx.vercel.app/api/insights`）を開く。次のように表示されればOK
+
+```
+{"available":true,"remaining":3,"limit":3}
+```
+
+2. アプリの「月次レポート」画面に「**AIで文章を生成**」ボタンが表示される。押すと、バッジが「**AI生成**」に変わる
+
+| `/api/insights` の表示 | 原因と対処 |
+|---|---|
+| `"reason":"not_configured"` | `ANTHROPIC_API_KEY` が未登録、または再デプロイしていない |
+| `"reason":"limiter_not_configured"` | `UPSTASH_REDIS_REST_URL` / `TOKEN` が未登録、または再デプロイしていない |
+| `"reason":"limiter_error"` | Upstash の URL かトークンが間違っている（コピーし直す） |
+| `"reason":"limit"` | 今日の利用上限に達した（日本時間で翌日に戻る）。自動集計は使える |
+| `"reason":"disabled"` | `AI_ENABLED=false` になっている |
+
+#### 止めたいとき
+
+- すぐにAIだけ止める：Vercel の環境変数に `AI_ENABLED` = `false` を追加して再デプロイ（自動集計は使い続けられます）
+- 完全に止める：Claude Console の API keys でキーを削除する（その瞬間から一切使えなくなります）
 
 ## 起動方法（開発中）
 
