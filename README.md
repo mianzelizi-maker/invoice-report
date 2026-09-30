@@ -3,8 +3,8 @@
 中小企業の経理向けに、**請求書のCSVを取り込むだけで、入金状況の判定・売掛金の見える化・月次レポート・請求書PDFの発行**までを行うWebアプリです。
 ログインやデータベースは不要で、ブラウザだけで動きます。
 
-- 公開URL：（公開後に記載）
-- 開発概要ページ：（公開後に記載）
+- 公開URL：https://mianzelizi-maker.github.io/invoice-report/
+- 開発概要ページ：https://mianzelizi-maker.github.io/invoice-report/overview.html
 - ソースコード：https://github.com/mianzelizi-maker/invoice-report
 - サンプルデータ入り：画面の「サンプルデータで試す」ボタンですぐに動作を確認できます
 
