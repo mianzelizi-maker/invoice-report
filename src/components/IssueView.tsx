@@ -18,7 +18,7 @@ const DEFAULT_ISSUER: Issuer = {
   name: '株式会社サンプル商事',
   address: '東京都千代田区サンプル1-2-3',
   tel: '03-0000-0000',
-  registrationNo: '',
+  registrationNo: 'T1234567890123', // ダミー（実在しない番号）
   bank: 'サンプル銀行 本店 普通 1234567\nカ）サンプルショウジ',
 }
 const SAMPLE_LINES: LineInput[] = [
