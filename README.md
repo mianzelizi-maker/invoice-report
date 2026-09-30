@@ -43,7 +43,7 @@
 | PDF | @react-pdf/renderer ／ 日本語フォント Noto Sans JP（SIL OFL、サブセット） |
 | AI | Claude API（`@anthropic-ai/sdk`、既定モデル Claude Haiku 4.5） |
 | サーバー側（AI生成用・現在の公開版では未使用） | Vercel Functions（APIキーをここだけに置く）／ Upstash Redis（1日の利用回数の記録） |
-| テスト | Vitest（自動テスト129件） |
+| テスト | Vitest（自動テスト130件） |
 | 公開 | GitHub ／ GitHub Pages（AI生成を使う場合は Vercel） |
 
 ## 工夫した点
@@ -103,7 +103,7 @@ npm run dev
 
 | コマンド | 内容 |
 |---|---|
-| `npm test` | 自動テストを実行する（129件） |
+| `npm test` | 自動テストを実行する（130件） |
 | `npm run build` | 公開用のファイルを作る（`dist` フォルダ） |
 | `npm run deploy:pages` | GitHub Pages 用にビルドして、`gh-pages` ブランチへ送る |
 | `npm run sample` | サンプルCSV（`public/sample.csv`）を作り直す |
