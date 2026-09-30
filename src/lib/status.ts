@@ -29,6 +29,15 @@ export function displayStatus(inv: Invoice, asOf: string): DisplayStatus {
   return isOverdue(inv, asOf) ? '支払遅延' : paymentStatus(inv)
 }
 
+/**
+ * 画面表示用のラベル。一部入金のうえ遅延している請求書は「一部入金・遅延」として、
+ * 一部入金されていることも分かるようにする（それ以外は displayStatus と同じ）。
+ */
+export function statusLabel(inv: Invoice, asOf: string): string {
+  const st = displayStatus(inv, asOf)
+  return st === '支払遅延' && inv.paidAmount > 0 ? '一部入金・遅延' : st
+}
+
 /** 未回収分の遅延日数（基準日 − 期日）。遅延していなければ 0 */
 export function overdueDays(inv: Invoice, asOf: string): number {
   return isOverdue(inv, asOf) ? daysBetween(inv.dueDate, asOf) : 0
