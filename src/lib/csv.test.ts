@@ -30,6 +30,22 @@ describe('正常なCSV', () => {
   })
 })
 
+describe('フリガナ列（任意）', () => {
+  it('列がなくても読める。あれば取り込み、半角カナは全角にそろえる', () => {
+    const none = parseCsv(csv('A社,INV-1,2026-09-01,1000,2026-09-30,,'))
+    expect(none.issues).toEqual([])
+    expect(none.invoices[0]).not.toHaveProperty('clientKana')
+    const withKana = parseCsv(`${H},client_kana\nA社,INV-1,2026-09-01,1000,2026-09-30,,,ｴｰｼｬ`)
+    expect(withKana.issues).toEqual([])
+    expect(withKana.invoices[0].clientKana).toBe('エーシャ')
+    const jp = parseCsv('取引先,取引先フリガナ,請求番号,請求日,請求額,支払期日,入金日,入金額\nA社,えーしゃ,INV-1,2026-09-01,1000,2026-09-30,,')
+    expect(jp.invoices[0].clientKana).toBe('えーしゃ')
+  })
+  it('フリガナが空の行も誤りにしない', () => {
+    expect(parseCsv(`${H},client_kana\nA社,INV-1,2026-09-01,1000,2026-09-30,,,`).issues).toEqual([])
+  })
+})
+
 describe('ファイル全体の誤り', () => {
   it('必要な列が足りないと、列名を示して取り込めない', () => {
     const r = parseCsv('client,invoice_no,issue_date,amount\nA社,INV-1,2026-09-01,1000')

@@ -4,6 +4,9 @@ import {
   calcInvoice, defaultDueDate, nextInvoiceNo, validateDraft, type InvoiceDraft, type Issuer, type LineInput, type TaxRate,
 } from '../lib/invoiceCalc'
 import { buildInvoicePdf, downloadBlob, pdfFileName } from '../lib/pdfExport'
+import { candidatesFromInvoices, findExact, mergeCandidates } from '../lib/clientSearch'
+import { addIssued, loadHistory, saveHistory } from '../lib/issueHistory'
+import ClientCombobox from './ClientCombobox'
 import { yen } from '../lib/format'
 import { Card } from './ui'
 
@@ -11,6 +14,9 @@ type Props = {
   invoices: Invoice[] | null
   defaultDate: string
   onIssued: (invoice: Invoice) => void
+  onLoadSample: () => void
+  onOpenImport: () => void
+  loadingSample: boolean
 }
 
 const STORAGE_KEY = 'invoice-report:issuer'
@@ -25,7 +31,6 @@ const SAMPLE_LINES: LineInput[] = [
   { name: 'Webサイト保守（9月分）', qty: 1, unitPrice: 50000, taxRate: 10 },
   { name: '広告運用代行', qty: 1, unitPrice: 120000, taxRate: 10 },
 ]
-const DIRECT = '__direct__'
 
 const input = 'w-full rounded-md border border-line bg-white px-2 py-2 text-sm'
 const label = 'block text-xs text-muted'
@@ -40,21 +45,18 @@ function loadIssuer(): Issuer {
   return DEFAULT_ISSUER
 }
 
-export default function IssueView({ invoices, defaultDate, onIssued }: Props) {
-  const clients = useMemo(
-    () => [...new Set((invoices ?? []).map((i) => i.client))].sort((a, b) => a.localeCompare(b, 'ja')),
-    [invoices],
-  )
+export default function IssueView({ invoices, defaultDate, onIssued, onLoadSample, onOpenImport, loadingSample }: Props) {
+  const [history, setHistory] = useState(loadHistory) // 発行の履歴（このブラウザに保存）
+  const candidates = useMemo(() => mergeCandidates(candidatesFromInvoices(invoices), history.clients), [invoices, history.clients])
   const [issuer, setIssuer] = useState<Issuer>(loadIssuer)
-  const [clientChoice, setClientChoice] = useState<string>(clients[0] ?? DIRECT)
-  const [clientText, setClientText] = useState('')
+  const [clientName, setClientName] = useState('')
+  const [clientKana, setClientKana] = useState('')
   const [issueDate, setIssueDate] = useState(defaultDate)
   const [dueDate, setDueDate] = useState(defaultDueDate(defaultDate))
   const [dueEdited, setDueEdited] = useState(false)
   const [lines, setLines] = useState<LineInput[]>(SAMPLE_LINES)
   const [note, setNote] = useState('')
   const [addToData, setAddToData] = useState(invoices !== null)
-  const [issuedNos, setIssuedNos] = useState<string[]>([]) // このセッションで発行した番号（データに追加しない場合も重複させない）
   const [issues, setIssues] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
@@ -72,12 +74,24 @@ export default function IssueView({ invoices, defaultDate, onIssued }: Props) {
     if (!dueEdited) setDueDate(defaultDueDate(issueDate))
   }, [issueDate, dueEdited])
 
-  const client = clientChoice === DIRECT ? clientText : clientChoice
+  useEffect(() => {
+    saveHistory(history)
+  }, [history])
+
+  // 発行画面を開いたあとでデータが読み込まれたら、「請求データへ追加」を選べる状態（既定はオン）にする
+  const hasData = invoices !== null
+  useEffect(() => {
+    setAddToData(hasData)
+  }, [hasData])
+
+  // 請求番号は、読み込んだデータの番号と、このブラウザで発行済みの番号の続きから採番する
   const invoiceNo = useMemo(
-    () => nextInvoiceNo([...(invoices ?? []).map((i) => i.invoiceNo), ...issuedNos], issueDate),
-    [invoices, issuedNos, issueDate],
+    () => nextInvoiceNo([...(invoices ?? []).map((i) => i.invoiceNo), ...history.nos], issueDate),
+    [invoices, history.nos, issueDate],
   )
-  const draft: InvoiceDraft = { issuer, client: client.trim(), invoiceNo, issueDate, dueDate, lines, note }
+  const known = findExact(candidates, clientName) // 候補にある取引先か（なければ新規）
+  const kana = known?.kana ?? clientKana.trim()
+  const draft: InvoiceDraft = { issuer, client: clientName.trim(), invoiceNo, issueDate, dueDate, lines, note }
   const totals = calcInvoice(lines)
 
   const setLine = (i: number, patch: Partial<LineInput>) => setLines((ls) => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)))
@@ -93,10 +107,10 @@ export default function IssueView({ invoices, defaultDate, onIssued }: Props) {
       const blob = await buildInvoicePdf(draft)
       const name = pdfFileName(draft)
       downloadBlob(blob, name)
-      setIssuedNos((n) => [...n, draft.invoiceNo])
+      setHistory((h) => addIssued(h, { name: draft.client, kana }, draft.invoiceNo))
       if (addToData) {
         onIssued({
-          client: draft.client, invoiceNo: draft.invoiceNo, issueDate: draft.issueDate, amount: totals.total,
+          client: draft.client, ...(kana ? { clientKana: kana } : {}), invoiceNo: draft.invoiceNo, issueDate: draft.issueDate, amount: totals.total,
           dueDate: draft.dueDate, paidDate: null, paidAmount: 0,
         })
       }
@@ -110,21 +124,60 @@ export default function IssueView({ invoices, defaultDate, onIssued }: Props) {
 
   return (
     <div className="space-y-4">
+      {invoices === null && (
+        <div className="rounded-xl border border-amber bg-amber/10 p-4 text-sm">
+          <p className="font-semibold text-navy">請求データがまだ読み込まれていません</p>
+          <p className="mt-1 text-muted">
+            このままでもPDFは作れますが、データを読み込むまでは次の機能が使えません。
+          </p>
+          <ul className="mt-1 list-disc pl-5 text-muted">
+            <li>宛先の候補（取引先の一覧）。過去に発行した宛先は、データがなくても候補に出ます</li>
+            <li>請求番号を、読み込んだデータの番号の続きから採番すること（いまは 001 から始まります）</li>
+            <li>発行した請求書を、売掛金・回収予定に反映すること</li>
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button
+              onClick={onLoadSample}
+              disabled={loadingSample}
+              className="rounded-md bg-amber px-4 py-2 font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {loadingSample ? '読み込み中…' : 'サンプルデータを読み込む'}
+            </button>
+            <button onClick={onOpenImport} className="rounded-md border border-navy px-4 py-2 font-semibold text-navy hover:bg-navy/5">
+              CSVを取り込む
+            </button>
+          </div>
+        </div>
+      )}
+
       <Card title="宛先と日付" note="請求番号は「INV-年月-連番」で自動的に採番されます。">
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className={label}>
-            宛先（取引先）
-            <select className={input} value={clientChoice} onChange={(e) => setClientChoice(e.target.value)}>
-              {clients.map((c) => <option key={c} value={c}>{c}</option>)}
-              <option value={DIRECT}>（新しい取引先を入力）</option>
-            </select>
-          </label>
-          {clientChoice === DIRECT && (
-            <label className={label}>
-              宛先の名前
-              <input className={input} value={clientText} onChange={(e) => setClientText(e.target.value)} placeholder="例：株式会社〇〇" />
+          <div className={`${label} sm:col-span-2`}>
+            <label>
+              宛先（取引先）
+              <span className="ml-2 text-muted">名前の一部や、フリガナ（頭文字でも可）で絞り込めます。↑↓とEnterでも選べます</span>
             </label>
-          )}
+            <div className="mt-1">
+              <ClientCombobox
+                value={clientName}
+                onChange={setClientName}
+                onPick={(c) => { setClientName(c.name); setClientKana(c.kana ?? '') }}
+                candidates={candidates}
+                placeholder={candidates.length > 0 ? '例：物流、あるふぁ、と' : '例：株式会社〇〇（データを読み込むと候補が出ます）'}
+              />
+            </div>
+            {clientName.trim() && !known && (
+              <div className="mt-2 grid gap-1 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-3">
+                <span className="text-muted">新しい取引先として発行します。フリガナ（任意）：</span>
+                <input
+                  className={input}
+                  value={clientKana}
+                  onChange={(e) => setClientKana(e.target.value)}
+                  placeholder="例：カブシキガイシャマルマル（次回から読みで検索できます）"
+                />
+              </div>
+            )}
+          </div>
           <label className={label}>
             請求番号（自動）
             <input className={`${input} bg-paper`} value={invoiceNo} readOnly />

@@ -21,14 +21,14 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSample = async () => {
+  const handleSample = async (goToOverview = true) => {
     setLoading(true)
     setError(null)
     try {
       setInvoices(await loadSample())
       setSource('サンプルデータ')
       setAsOf(SAMPLE_AS_OF) // サンプルは基準日に固定すると毎回同じ結果になる
-      setView('overview')
+      if (goToOverview) setView('overview')
     } catch (e) {
       setError(e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
@@ -56,14 +56,21 @@ export default function App() {
     <div className="min-h-screen md:flex">
       <Sidebar {...nav} />
       <div className="min-w-0 flex-1">
-        <TopBar asOf={asOf} onAsOfChange={setAsOf} onSample={handleSample} loading={loading} hasData={invoices !== null} source={invoices && source ? `${source}（${invoices.length}件）` : null} />
+        <TopBar asOf={asOf} onAsOfChange={setAsOf} onSample={() => handleSample()} loading={loading} hasData={invoices !== null} source={invoices && source ? `${source}（${invoices.length}件）` : null} />
         <main className="mx-auto max-w-5xl px-4 pt-4 pb-24 md:pb-8">
           {view === 'issue' ? (
-            <IssueView invoices={invoices} defaultDate={asOf} onIssued={handleIssued} />
+            <IssueView
+              invoices={invoices}
+              defaultDate={asOf}
+              onIssued={handleIssued}
+              onLoadSample={() => handleSample(false)}
+              onOpenImport={() => setView('import')}
+              loadingSample={loading}
+            />
           ) : view === 'import' ? (
             <ImportView current={invoices && source ? { label: source, count: invoices.length } : null} onImport={handleImport} />
           ) : !invoices ? (
-            <EmptyState onSample={handleSample} onImport={() => setView('import')} loading={loading} error={error} />
+            <EmptyState onSample={() => handleSample()} onImport={() => setView('import')} loading={loading} error={error} />
           ) : view === 'overview' ? (
             <Overview invoices={invoices} asOf={asOf} />
           ) : view === 'invoices' ? (

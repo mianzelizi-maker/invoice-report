@@ -4,11 +4,12 @@ import type { Invoice } from '../types'
 /** サンプルデータが再現している基準日（この日付で見ると毎回同じ結果になる） */
 export const SAMPLE_AS_OF = '2026-09-30'
 
-type Key = 'client' | 'invoiceNo' | 'issueDate' | 'amount' | 'dueDate' | 'paidDate' | 'paidAmount'
+type Key = 'client' | 'clientKana' | 'invoiceNo' | 'issueDate' | 'amount' | 'dueDate' | 'paidDate' | 'paidAmount'
 
 /** 列の定義：画面に出す名前、受け付けるヘッダー名（小文字化して比較）、説明 */
-export const COLUMNS: { key: Key; label: string; aliases: string[]; example: string; note: string }[] = [
+export const COLUMNS: { key: Key; label: string; aliases: string[]; example: string; note: string; optional?: boolean }[] = [
   { key: 'client', label: '取引先', aliases: ['client', '取引先', '取引先名', '顧客'], example: '丸山製作所', note: '空にできません' },
+  { key: 'clientKana', label: 'フリガナ', aliases: ['client_kana', '取引先フリガナ', 'フリガナ', 'ふりがな'], example: 'マルヤマセイサクジョ', note: '任意。列がなくてもよい。請求書発行の宛先を読みで検索できる', optional: true },
   { key: 'invoiceNo', label: '請求番号', aliases: ['invoice_no', '請求番号', '請求書番号'], example: 'INV-202609-001', note: '重複できません' },
   { key: 'issueDate', label: '請求日', aliases: ['issue_date', '請求日', '発行日'], example: '2026-09-30', note: 'YYYY-MM-DD または YYYY/MM/DD' },
   { key: 'amount', label: '請求額', aliases: ['amount', '請求額', '請求金額'], example: '520300', note: '税込の円。1円以上の整数' },
@@ -17,7 +18,7 @@ export const COLUMNS: { key: Key; label: string; aliases: string[]; example: str
   { key: 'paidAmount', label: '入金額', aliases: ['paid_amount', '入金額', '入金金額'], example: '520300', note: '未入金なら空か0。請求額を超えられません' },
 ]
 const LABEL = Object.fromEntries(COLUMNS.map((c) => [c.key, c.label])) as Record<Key, string>
-const REQUIRED: Key[] = COLUMNS.map((c) => c.key) // 列そのものは全て必要（値は入金日・入金額のみ空欄可）
+const REQUIRED: Key[] = COLUMNS.filter((c) => !c.optional).map((c) => c.key) // 列そのものが必要なもの（値は入金日・入金額のみ空欄可）
 
 export type CsvIssue = {
   row: number // ファイル内の行番号（見出し行が1行目）。0は行に紐づかない問題
@@ -175,8 +176,9 @@ export function parseCsv(text: string): ParseResult {
     if (result.issues.length > before) {
       result.invalidRows++
     } else {
+      const clientKana = col.clientKana >= 0 ? get('clientKana') : ''
       result.invoices.push({
-        client, invoiceNo, issueDate: issueDate!, amount: amount!, dueDate: dueDate!,
+        client, ...(clientKana ? { clientKana } : {}), invoiceNo, issueDate: issueDate!, amount: amount!, dueDate: dueDate!,
         paidDate: paidAmount > 0 ? paidDate : null, paidAmount,
       })
     }

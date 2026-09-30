@@ -54,6 +54,12 @@ const clients: Client[] = [
   { name: 'セイコー電気', start: 0, issueDay: 31, terms: 30, base: [420000, 520000], pay: (i) => (i === 3 ? { kind: 'partial', ratio: 0.5, lateDays: 0 } : paid(between(-2, 1))) },
 ]
 
+const KANA: Record<string, string> = {
+  丸山製作所: 'マルヤマセイサクジョ', 北斗デザイン: 'ホクトデザイン', 東和建設: 'トウワケンセツ', サクラ食品: 'サクラショクヒン',
+  アルファ物流: 'アルファブツリュウ', ミドリ薬局: 'ミドリヤッキョク', ネクスト教育: 'ネクストキョウイク', ヤマト商会: 'ヤマトショウカイ',
+  光洋印刷: 'コウヨウインサツ', セイコー電気: 'セイコーデンキ',
+}
+
 type Row = {
   client: string; no: string; issue: string; amount: number; due: string; paidDate: string; paidAmount: number
 }
@@ -88,7 +94,7 @@ MONTHS.forEach((ym, mi) => {
   }
 })
 
-const header = 'client,invoice_no,issue_date,amount,due_date,paid_date,paid_amount'
-const lines = rows.map((r) => [r.client, r.no, r.issue, r.amount, r.due, r.paidDate, r.paidAmount].join(','))
+const header = 'client,invoice_no,issue_date,amount,due_date,paid_date,paid_amount,client_kana'
+const lines = rows.map((r) => [r.client, r.no, r.issue, r.amount, r.due, r.paidDate, r.paidAmount, KANA[r.client] ?? ''].join(','))
 writeFileSync(new URL('../public/sample.csv', import.meta.url), [header, ...lines].join('\n') + '\n', 'utf8')
 console.log(`public/sample.csv を出力しました（${rows.length}件、基準日 ${AS_OF}）`)
