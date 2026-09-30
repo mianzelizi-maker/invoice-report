@@ -7,9 +7,10 @@ type Props = {
   onSample: () => void
   loading: boolean
   hasData: boolean
+  source: string | null
 }
 
-export default function TopBar({ asOf, onAsOfChange, onSample, loading, hasData }: Props) {
+export default function TopBar({ asOf, onAsOfChange, onSample, loading, hasData, source }: Props) {
   return (
     <header className="border-b border-line bg-card">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
@@ -28,6 +29,7 @@ export default function TopBar({ asOf, onAsOfChange, onSample, loading, hasData 
             </button>
           )}
         </label>
+        {source && <span className="min-w-0 truncate text-xs text-muted">データ：{source}</span>}
         <button
           onClick={onSample}
           disabled={loading}

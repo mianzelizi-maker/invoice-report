@@ -135,7 +135,7 @@ describe('statusLabel', () => {
 })
 
 describe('サンプルデータ全体の整合', () => {
-  const invoices = parseCsv(readFileSync('public/sample.csv', 'utf8'))
+  const invoices = parseCsv(readFileSync('public/sample.csv', 'utf8')).invoices
   const s = summarize(invoices, SAMPLE_AS_OF)
   it('取引先別・年齢別・月別の合計が全体と一致する', () => {
     const clients = byClient(invoices, SAMPLE_AS_OF)

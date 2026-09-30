@@ -1,9 +1,10 @@
-export type View = 'overview' | 'invoices' | 'clients'
+export type View = 'overview' | 'invoices' | 'clients' | 'import'
 
 export const VIEWS: { id: View; label: string }[] = [
   { id: 'overview', label: '概要' },
   { id: 'invoices', label: '請求書一覧' },
   { id: 'clients', label: '取引先別' },
+  { id: 'import', label: 'データ取込' },
 ]
 
 type Props = { view: View; onChange: (v: View) => void; disabled: boolean }
@@ -20,7 +21,7 @@ export function Sidebar({ view, onChange, disabled }: Props) {
         {VIEWS.map((v) => (
           <button
             key={v.id}
-            disabled={disabled}
+            disabled={disabled && v.id !== 'import'}
             onClick={() => onChange(v.id)}
             className={`rounded-md px-3 py-2 text-left text-sm disabled:opacity-40 ${
               view === v.id ? 'bg-white/15 font-semibold' : 'text-white/75 hover:bg-white/10'
@@ -41,7 +42,7 @@ export function BottomNav({ view, onChange, disabled }: Props) {
       {VIEWS.map((v) => (
         <button
           key={v.id}
-          disabled={disabled}
+          disabled={disabled && v.id !== 'import'}
           onClick={() => onChange(v.id)}
           className={`flex-1 py-3 text-xs disabled:opacity-40 ${
             view === v.id ? 'border-t-2 border-amber font-bold' : 'border-t-2 border-transparent text-white/70'

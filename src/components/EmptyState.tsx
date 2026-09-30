@@ -1,4 +1,4 @@
-type Props = { onSample: () => void; loading: boolean; error: string | null }
+type Props = { onSample: () => void; onImport: () => void; loading: boolean; error: string | null }
 
 const RULES: [string, string][] = [
   ['入金済み', '請求額の全額が入金されている'],
@@ -7,7 +7,7 @@ const RULES: [string, string][] = [
   ['支払遅延', '残高があり、支払期日を過ぎている（一部入金でも遅延なら「一部入金・遅延」）'],
 ]
 
-export default function EmptyState({ onSample, loading, error }: Props) {
+export default function EmptyState({ onSample, onImport, loading, error }: Props) {
   return (
     <div className="mx-auto max-w-2xl rounded-xl border border-line bg-card p-6 sm:p-10">
       <h2 className="text-xl font-bold text-navy">売掛金の「いま」を、ひと目で。</h2>
@@ -15,13 +15,21 @@ export default function EmptyState({ onSample, loading, error }: Props) {
         請求書データから入金状況を自動で判定し、取引先ごとの売掛金残高・今月の回収予定・
         支払いが遅れがちな取引先を見える化します。まずはサンプルデータで動きを確認できます。
       </p>
-      <button
-        onClick={onSample}
-        disabled={loading}
-        className="mt-6 rounded-md bg-amber px-6 py-3 font-semibold text-white hover:opacity-90 disabled:opacity-50"
-      >
-        {loading ? '読み込み中…' : 'サンプルデータで試す'}
-      </button>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <button
+          onClick={onSample}
+          disabled={loading}
+          className="rounded-md bg-amber px-6 py-3 font-semibold text-white hover:opacity-90 disabled:opacity-50"
+        >
+          {loading ? '読み込み中…' : 'サンプルデータで試す'}
+        </button>
+        <button
+          onClick={onImport}
+          className="rounded-md border border-navy px-6 py-3 font-semibold text-navy hover:bg-navy/5"
+        >
+          CSVを取り込む
+        </button>
+      </div>
       {error && <p className="mt-4 text-sm text-overdue">{error}</p>}
       <dl className="mt-8 space-y-2 border-t border-line pt-5 text-sm">
         {RULES.map(([k, v]) => (
