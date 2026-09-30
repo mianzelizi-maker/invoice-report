@@ -1,79 +1,56 @@
 import { useState } from 'react'
 import type { Invoice } from './types'
 import { SAMPLE_AS_OF, loadSample } from './lib/csv'
-import { balance, displayStatus, overdueDays } from './lib/status'
-import { dateLabel, yen } from './lib/format'
+import { BottomNav, Sidebar, type View } from './components/Nav'
+import TopBar from './components/TopBar'
+import EmptyState from './components/EmptyState'
+import Overview from './components/Overview'
+import InvoiceList from './components/InvoiceList'
+import ClientView from './components/ClientView'
 
-// Step 1 の暫定画面：サンプルを読み込み、判定結果を一覧で確認する。
-// 本格的なダッシュボードは Step 3 で作り直す。
-const BADGE: Record<string, string> = {
-  入金済み: 'bg-paid/15 text-paid',
-  一部入金: 'bg-amber/15 text-amber',
-  未入金: 'bg-navy/10 text-navy',
-  支払遅延: 'bg-overdue/15 text-overdue font-bold',
-}
+const today = () => new Date().toISOString().slice(0, 10)
 
 export default function App() {
-  const [rows, setRows] = useState<Invoice[] | null>(null)
+  const [invoices, setInvoices] = useState<Invoice[] | null>(null)
+  const [asOf, setAsOf] = useState(today)
+  const [view, setView] = useState<View>('overview')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleSample = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      setRows(await loadSample())
-      setError(null)
+      setInvoices(await loadSample())
+      setAsOf(SAMPLE_AS_OF) // サンプルは基準日に固定すると毎回同じ結果になる
+      setView('overview')
     } catch (e) {
       setError(e instanceof Error ? e.message : '読み込みに失敗しました')
+    } finally {
+      setLoading(false)
     }
   }
 
+  const nav = { view, onChange: setView, disabled: invoices === null }
+
   return (
-    <div className="min-h-screen">
-      <header className="bg-navy text-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-          <h1 className="text-lg font-bold">請求・入金管理レポート</h1>
-          <button onClick={handleSample} className="rounded-md bg-amber px-3 py-2 text-sm font-semibold text-white">
-            サンプルデータで試す
-          </button>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-4">
-        {error && <p className="text-overdue">{error}</p>}
-        {!rows ? (
-          <p className="text-muted">「サンプルデータで試す」を押してください。</p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-line bg-card">
-            <p className="p-3 text-xs text-muted">基準日 {dateLabel(SAMPLE_AS_OF)} ／ {rows.length}件</p>
-            <table className="w-full text-sm">
-              <thead className="bg-paper text-xs text-muted">
-                <tr>
-                  {['取引先', '請求番号', '請求額', '支払期日', '入金額', '残高', '状態', '遅延日数'].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left font-medium whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => {
-                  const st = displayStatus(r, SAMPLE_AS_OF)
-                  return (
-                    <tr key={r.invoiceNo + r.client} className="border-t border-line">
-                      <td className="px-3 py-2 whitespace-nowrap">{r.client}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.invoiceNo}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{yen(r.amount)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{dateLabel(r.dueDate)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{yen(r.paidAmount)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{yen(balance(r))}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className={`rounded px-2 py-0.5 text-xs ${BADGE[st]}`}>{st}</span>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{overdueDays(r, SAMPLE_AS_OF) || '—'}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </main>
+    <div className="min-h-screen md:flex">
+      <Sidebar {...nav} />
+      <div className="min-w-0 flex-1">
+        <TopBar asOf={asOf} onAsOfChange={setAsOf} onSample={handleSample} loading={loading} hasData={invoices !== null} />
+        <main className="mx-auto max-w-5xl px-4 pt-4 pb-24 md:pb-8">
+          {!invoices ? (
+            <EmptyState onSample={handleSample} loading={loading} error={error} />
+          ) : view === 'overview' ? (
+            <Overview invoices={invoices} asOf={asOf} />
+          ) : view === 'invoices' ? (
+            <InvoiceList invoices={invoices} asOf={asOf} />
+          ) : (
+            <ClientView invoices={invoices} asOf={asOf} />
+          )}
+        </main>
+      </div>
+      <BottomNav {...nav} />
     </div>
   )
 }
