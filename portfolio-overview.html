@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>請求・入金管理レポート 開発概要</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap');
+
+:root {
+  --bg: #F7F3EA;
+  --surface: #FFFDF8;
+  --surface-sunken: #EFE9D9;
+  --ink: #1D2433;
+  --ink-muted: #5F6676;
+  --ink-faint: #8A8F9C;
+  --accent: #1C2A4A;
+  --accent-soft: #DDE3F0;
+  --accent-ink: #1C2A4A;
+  --accent-warm: #C98A1B;
+  --accent-warm-soft: #F6EBD3;
+  --border: #E6DFCF;
+  --border-strong: #CFC6B0;
+  --shadow: 0 1px 2px rgba(29,36,51,0.07);
+  --shadow-lg: 0 8px 24px rgba(29,36,51,0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161B27;
+    --surface: #1F2635;
+    --surface-sunken: #262E40;
+    --ink: #EDEAE0;
+    --ink-muted: #A9AEBB;
+    --ink-faint: #7C8291;
+    --accent: #8FA6D9;
+    --accent-soft: #263050;
+    --accent-ink: #C5D1F0;
+    --accent-warm: #E0AE55;
+    --accent-warm-soft: #3A3120;
+    --border: #2E3649;
+    --border-strong: #414B63;
+    --shadow: 0 1px 3px rgba(0,0,0,0.35);
+    --shadow-lg: 0 10px 28px rgba(0,0,0,0.35);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161B27;
+  --surface: #1F2635;
+  --surface-sunken: #262E40;
+  --ink: #EDEAE0;
+  --ink-muted: #A9AEBB;
+  --ink-faint: #7C8291;
+  --accent: #8FA6D9;
+  --accent-soft: #263050;
+  --accent-ink: #C5D1F0;
+  --accent-warm: #E0AE55;
+  --accent-warm-soft: #3A3120;
+  --border: #2E3649;
+  --border-strong: #414B63;
+  --shadow: 0 1px 3px rgba(0,0,0,0.35);
+  --shadow-lg: 0 10px 28px rgba(0,0,0,0.35);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Zen Maru Gothic", "Noto Sans JP", sans-serif;
+  line-height: 1.85;
+  font-size: 15.5px;
+}
+
+.doc { max-width: 940px; margin: 0 auto; padding: 0 24px 96px; }
+
+.masthead { padding-block: 56px 36px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; letter-spacing: 0.14em; color: var(--accent-ink);
+  font-weight: 700; margin-bottom: 18px;
+}
+.eyebrow::before { content: ""; width: 18px; height: 1px; background: var(--accent); }
+
+h1.doc-title {
+  font-family: "Shippori Mincho", serif; font-weight: 600;
+  font-size: clamp(26px, 4vw, 38px); line-height: 1.45; letter-spacing: 0.01em;
+  margin: 0 0 14px; text-wrap: balance;
+}
+
+.doc-sub { color: var(--ink-muted); font-size: 15px; max-width: 62ch; margin: 0 0 28px; }
+
+.meta-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 18px 28px; padding-top: 22px; border-top: 1px solid var(--border);
+}
+.meta-item .label {
+  font-size: 11px; letter-spacing: 0.1em; color: var(--ink-faint);
+  font-weight: 700; margin-bottom: 6px; text-transform: uppercase;
+}
+.meta-item .value { font-size: 14px; color: var(--ink); }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 999px; background: var(--accent-soft);
+  color: var(--accent-ink); font-size: 12.5px; font-weight: 700;
+}
+.status-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-warm); }
+
+section.block { padding-top: 6px; margin-bottom: 48px; }
+.sec-head {
+  display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px;
+  border-bottom: 1px solid var(--border); padding-bottom: 12px;
+}
+.sec-num { font-family: "Shippori Mincho", serif; font-size: 13px; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+h2.sec-title { font-family: "Shippori Mincho", serif; font-weight: 600; font-size: 20px; margin: 0; text-wrap: balance; }
+
+p { margin: 0 0 14px; max-width: 68ch; }
+p.lead { color: var(--ink-muted); font-size: 15px; }
+code { font-size: 0.92em; background: var(--surface-sunken); padding: 1px 6px; border-radius: 6px; }
+
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.feature-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px; box-shadow: var(--shadow);
+}
+.feature-card .k { font-size: 11px; letter-spacing: 0.06em; font-weight: 700; color: var(--accent-ink); text-transform: uppercase; margin-bottom: 8px; }
+.feature-card .v { font-size: 13.5px; color: var(--ink); }
+
+.stack-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.stack-chip {
+  font-size: 12.5px; padding: 5px 12px; border-radius: 999px;
+  background: var(--surface-sunken); border: 1px solid var(--border); color: var(--ink);
+}
+
+.episode {
+  border: 1px solid var(--border); border-left: 3px solid var(--accent-warm);
+  background: var(--surface); border-radius: 0 14px 14px 0;
+  padding: 16px 20px; margin-bottom: 12px; box-shadow: var(--shadow);
+}
+.episode .title { font-weight: 700; font-size: 14px; margin-bottom: 6px; color: var(--ink); }
+.episode p { font-size: 13.5px; color: var(--ink-muted); margin-bottom: 0; }
+
+.callout {
+  background: var(--accent-warm-soft); border: 1px solid var(--border); border-left: 3px solid var(--accent-warm);
+  border-radius: 0 14px 14px 0;
+  padding: 16px 20px; margin: 4px 0 0;
+}
+.callout .callout-label { font-size: 11px; letter-spacing: 0.08em; font-weight: 700; color: var(--accent-warm); text-transform: uppercase; margin-bottom: 6px; display: block; }
+.callout p { margin: 0 0 8px; max-width: none; font-size: 13.5px; }
+.callout ul { margin: 0 0 8px; padding-left: 20px; font-size: 13.5px; }
+.callout li { margin-bottom: 2px; }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+
+/* 処理の流れ図 */
+.flow-wrap {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 28px 24px 24px; box-shadow: var(--shadow-lg);
+  overflow-x: auto;
+}
+.flow-main { display: flex; align-items: center; gap: 0; min-width: 640px; }
+.flow-step {
+  flex: 1; text-align: center; padding: 14px 10px;
+  background: var(--surface-sunken); border: 1px solid var(--border); border-radius: 10px;
+}
+.flow-step .st { font-family: "Shippori Mincho", serif; font-size: 12.5px; color: var(--ink-faint); letter-spacing: 0.03em; }
+.flow-step .lb { font-size: 13.5px; font-weight: 700; margin-top: 3px; }
+.flow-step.done { background: var(--accent-warm-soft); border-color: var(--accent-warm); }
+.flow-step.done .lb { color: var(--accent-warm); }
+.flow-arrow { flex: 0 0 auto; width: 28px; height: 2px; background: var(--border-strong); position: relative; margin: 0 4px; }
+.flow-arrow::after {
+  content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+  border: 4px solid transparent; border-left-color: var(--border-strong);
+}
+.flow-branch {
+  margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--border);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--ink-muted);
+}
+.flow-branch .tag {
+  font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent-ink);
+}
+.flow-branch .to { font-family: "Shippori Mincho", serif; color: var(--ink); }
+
+/* リンク */
+.link-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.link-card {
+  display: block; text-decoration: none; color: inherit;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 20px; box-shadow: var(--shadow);
+}
+.link-card:hover { border-color: var(--accent); }
+.link-card .k { font-size: 11px; letter-spacing: 0.06em; font-weight: 700; color: var(--accent-ink); margin-bottom: 4px; }
+.link-card .u { font-size: 13.5px; word-break: break-all; color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+.link-card .d { font-size: 12.5px; color: var(--ink-muted); margin-top: 4px; }
+
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--ink-faint); font-size: 12px; }
+
+@media (max-width: 640px) {
+  .flow-main { min-width: 560px; }
+}
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="masthead">
+    <div class="eyebrow">PROJECT OVERVIEW</div>
+    <h1 class="doc-title">請求・入金管理レポート<br>開発概要</h1>
+    <p class="doc-sub">中小企業の経理向けに、請求書のCSVを取り込むだけで、入金状況の判定・売掛金の見える化・月次レポート・請求書PDFの発行までを行うWebアプリ。ログインやデータベースは不要で、ブラウザだけで動きます。企画・設計・実装・テスト・公開までを個人開発として行いました。</p>
+    <div class="meta-row">
+      <div class="meta-item">
+        <div class="label">ステータス</div>
+        <div class="value"><span class="status-pill">全機能実装済み・自動テスト129件</span></div>
+      </div>
+      <div class="meta-item">
+        <div class="label">開発期間</div>
+        <div class="value">2026年9月</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">開発形態</div>
+        <div class="value">個人開発(ポートフォリオ)</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">主要ツール</div>
+        <div class="value">React / TypeScript / Claude API</div>
+      </div>
+    </div>
+  </header>
+
+  <section class="block">
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">背景・目的</h2></div>
+    <p class="lead">中小企業の経理では、請求書と入金の突き合わせをExcelやスプレッドシートで手作業していることが多く、「入金済み・一部入金・未入金・支払遅延」の判定や遅延日数の数え上げに手間がかかること、どの取引先に売掛金がいくら残っていて、どこから先に回収すべきかが一目で分からないこと、月次の売掛金報告を毎月文章にまとめ直していること、請求書作成の計算ミスや番号の重複が起きやすいことが悩みになりがちです。本アプリは、CSVを取り込めば自動で判定・集計・文章化・請求書発行までできる形にまとめ、経理担当者の月次作業の手間とミスを減らすことを目的に開発しました。</p>
+  </section>
+
+  <section class="block">
+    <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">処理の流れ</h2></div>
+    <p class="lead">CSVを取り込んだ時点で入力の誤りを検出し、基準日をもとに入金状況を自動判定。その結果から、画面表示・月次レポート・請求書発行へとつなげています。</p>
+    <div class="flow-wrap">
+      <div class="flow-main">
+        <div class="flow-step"><div class="st">STEP 1</div><div class="lb">CSV取り込み</div></div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step"><div class="st">STEP 2</div><div class="lb">誤りの検証</div></div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step"><div class="st">STEP 3</div><div class="lb">入金状況の判定</div></div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step"><div class="st">STEP 4</div><div class="lb">集計・可視化</div></div>
+        <div class="flow-arrow"></div>
+        <div class="flow-step done"><div class="st">STEP 5</div><div class="lb">レポート・請求書</div></div>
+      </div>
+      <div class="flow-branch">
+        <span class="tag">検証で誤りあり</span>
+        <span>何行目・どの列かを一覧表示 →</span>
+        <span class="to">誤り行を除いて取り込む</span>
+        <span>／</span>
+        <span class="to">直して読み込み直す</span>
+      </div>
+      <div class="flow-branch">
+        <span class="tag">月次レポート</span>
+        <span>集計結果から文章を作成 →</span>
+        <span class="to">AI生成（上限つき）</span>
+        <span>／</span>
+        <span class="to">自動集計（キー不要・常時利用可）</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">主な機能</h2></div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="k">CSV取り込みと検証</div>
+        <div class="v">請求書CSVを取り込み、誤りは「何行目・どの列・どんな誤りか」で表示。誤り行を除いての取り込みや、ExcelのShift_JIS、日本語の見出しにも対応。</div>
+      </div>
+      <div class="feature-card">
+        <div class="k">入金状況の自動判定</div>
+        <div class="v">入金済み／一部入金／未入金／支払遅延を自動判定し、遅延日数を計算。一部入金のうえ遅延している請求書は「一部入金・遅延」と表示。</div>
+      </div>
+      <div class="feature-card">
+        <div class="k">ダッシュボード</div>
+        <div class="v">売掛金残高・今月の回収予定・遅延額・回収率、年齢別残高、月別推移をグラフで表示。「回収を急ぐべき取引先」と「支払いが遅れがちな取引先」を別々に提示。PCは左サイドバー、スマホは下部タブ。</div>
+      </div>
+      <div class="feature-card">
+        <div class="k">月次レポート</div>
+        <div class="v">集計結果を文章に。APIキーがなくても動く「自動集計」と、Claude APIによる「AI生成」を選べ、どちらの文章かを画面に表示。</div>
+      </div>
+      <div class="feature-card">
+        <div class="k">請求書PDFの発行</div>
+        <div class="v">宛先・明細・税率（10%／軽減8%／非課税）を入力して日本語PDFを出力。請求番号の自動採番、小計・消費税・合計の計算、発行日・支払期日の記載。</div>
+      </div>
+      <div class="feature-card">
+        <div class="k">宛先の検索</div>
+        <div class="v">名前の一部やフリガナ（頭文字でも可）で絞り込み。ひらがな／カタカナ、全角／半角の違いを区別せず、↑↓とEnterでも選択可能。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">技術スタック</h2></div>
+    <div class="stack-row">
+      <span class="stack-chip">React 19</span>
+      <span class="stack-chip">TypeScript</span>
+      <span class="stack-chip">Vite</span>
+      <span class="stack-chip">Tailwind CSS v4</span>
+      <span class="stack-chip">Recharts</span>
+      <span class="stack-chip">PapaParse(CSV)</span>
+      <span class="stack-chip">@react-pdf/renderer + Noto Sans JP(PDF)</span>
+      <span class="stack-chip">Claude API(Haiku 4.5)</span>
+      <span class="stack-chip">Vercel Functions</span>
+      <span class="stack-chip">Upstash Redis(利用回数の記録)</span>
+      <span class="stack-chip">Vitest(自動テスト129件)</span>
+      <span class="stack-chip">GitHub / Vercel</span>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">開発で工夫した点</h2></div>
+    <p class="lead">経理の数字は「合っているのが当たり前」の領域です。解釈が割れやすい定義を先に決めてテストで固定することと、AIの利用で料金や安全性が問題にならないようにすることを、設計の軸にしました。</p>
+
+    <div class="episode">
+      <div class="title">判定ルールを言葉で定義し、境界値までテストで固定</div>
+      <p>「期日当日は遅延ではない」「残高があり期日を過ぎていれば、一部入金でも遅延を優先」「遅延日数は“いま遅れている日数”と“過去に遅れて入金された日数”を分けて数える」など、現場で解釈が割れやすい点を先に決め、期日の前日・当日・翌日や年またぎなどの境界値を自動テストにしました。</p>
+    </div>
+    <div class="episode">
+      <div class="title">APIキーの漏えいと、料金の膨張を仕組みで防止</div>
+      <p>キーはサーバー側の環境変数だけに置き、ブラウザにもGitHubにも出しません。公開版ではキーと利用回数のカウンタの両方がそろったときだけAIを有効にし、訪問者ごと・サービス全体の1日の上限、入力の厳格な検証、出力長の固定、リトライなしなどで、最悪でも1日約50円に収まる設計にしました。上限の動作はテストで確認し、キー未設定・上限到達・API障害のときは自動集計の文章に切り替わります。</p>
+    </div>
+    <div class="episode">
+      <div class="title">CSVの誤りを、原因の行と列まで示し、連鎖する指摘は抑制</div>
+      <p>「12行目の請求額『abc』が数値ではありません」のように表示。あわせて、その誤りから派生する指摘（入金額が数値でないために「入金額が空」と重ねて出るなど）は抑え、直すべき箇所だけを見せるようにしました。</p>
+    </div>
+    <div class="episode">
+      <div class="title">請求書の計算を実務の考え方に合わせ、数字の違和感は原因まで切り分け</div>
+      <p>消費税は税率ごとの合計に対して1回だけ円未満を切り捨て（明細ごとに丸めると1円ずれる例をテスト化）。また、サンプルの2社で遅延の数字が同じに見えた際は、計算ではなくサンプルデータの設定（基準日とのずれ）が原因だと突き止めて修正し、意図した傾向をテストに固定しました。</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">現状の制約・今後の展望</h2></div>
+    <div class="callout">
+      <span class="callout-label">現状評価と今後の計画</span>
+      <p>ログインやデータベースを持たない構成は、公開や試用が手軽な一方、次の制約があります。</p>
+      <ul>
+        <li>データはブラウザの中だけで扱い、再読み込みで消える（発行元の情報と発行履歴のみ、このブラウザに保存）</li>
+        <li>入金は1請求書につき1回分で、分割入金の履歴は持てない</li>
+        <li>請求書は適格請求書の主な記載事項を備えるが、あらゆる書式要件を網羅したものではない</li>
+        <li>AI生成の文章は誤りを含む可能性があり、数値は集計と照合する前提。数万件を超える大量データは未検証</li>
+      </ul>
+      <p>今後は、ログインとデータベースによる複数人・複数端末での利用、分割入金と入金の消込、督促メール文面の下書き、会計ソフトや銀行データとの連携、請求書の履歴管理と再発行を検討しています。</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="sec-head"><span class="sec-num">07</span><h2 class="sec-title">リンク</h2></div>
+    <div class="link-list">
+      <a class="link-card" href="__PUBLIC_URL__">
+        <div class="k">公開アプリ</div>
+        <div class="u">__PUBLIC_URL__</div>
+        <div class="d">「サンプルデータで試す」ボタンですぐに動作を確認できます</div>
+      </a>
+      <a class="link-card" href="__GITHUB_URL__">
+        <div class="k">ソースコード（GitHub）</div>
+        <div class="u">__GITHUB_URL__</div>
+        <div class="d">READMEに、背景・機能・技術スタック・起動方法・公開手順を記載</div>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    本資料はポートフォリオ提示用にまとめたものです。サンプルデータ（取引先名・金額・会社名・登録番号など）はすべて架空のものです。
+  </footer>
+</div>
+</body>
+</html>
