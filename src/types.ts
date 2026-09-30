@@ -1,23 +1,14 @@
-export type Row = {
-  month: string // YYYY-MM
+/** 請求書1件。日付は YYYY-MM-DD、金額は税込の円 */
+export type Invoice = {
   client: string
-  media: string
-  adSpend: number
-  inquiries: number
-  conversions: number
-  monthlyFee: number
-  outsourcingCost: number
+  invoiceNo: string
+  issueDate: string
+  amount: number
+  dueDate: string
+  paidDate: string | null
+  paidAmount: number
 }
 
-export type Totals = {
-  adSpend: number
-  inquiries: number
-  conversions: number
-  monthlyFee: number
-  outsourcingCost: number
-  grossProfit: number
-  grossMargin: number | null // 報酬0のときnull
-  cpa: number | null // CV0のときnull
-}
-
-export type Group = { key: string; totals: Totals }
+export type PaymentStatus = '入金済み' | '一部入金' | '未入金'
+/** 画面に出す状態。残高があり期日を過ぎていれば「支払遅延」を優先する */
+export type DisplayStatus = PaymentStatus | '支払遅延'
