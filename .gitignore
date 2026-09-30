@@ -6,3 +6,6 @@ dist
 .vercel
 *.log
 *.tsbuildinfo
+
+# 個人用の作業メモ（公開しない）
+docs/development-log.md
