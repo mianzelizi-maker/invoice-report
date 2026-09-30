@@ -1,9 +1,10 @@
-export type View = 'overview' | 'invoices' | 'clients' | 'import'
+export type View = 'overview' | 'invoices' | 'clients' | 'report' | 'import'
 
 export const VIEWS: { id: View; label: string }[] = [
   { id: 'overview', label: '概要' },
   { id: 'invoices', label: '請求書一覧' },
   { id: 'clients', label: '取引先別' },
+  { id: 'report', label: '月次レポート' },
   { id: 'import', label: 'データ取込' },
 ]
 

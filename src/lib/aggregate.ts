@@ -167,12 +167,21 @@ export function byMonth(invoices: Invoice[], asOf: string): MonthRow[] {
   return result
 }
 
-/** 今月が期日で未回収の請求書（期日の早い順） */
-export function dueThisMonth(invoices: Invoice[], asOf: string): Invoice[] {
-  const month = monthOf(asOf)
+/** 指定した月（YYYY-MM）が期日で未回収の請求書（期日の早い順） */
+export function dueInMonth(invoices: Invoice[], month: string): Invoice[] {
   return invoices
     .filter((i) => receivable(i) > 0 && monthOf(i.dueDate) === month)
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+}
+
+/** 今月が期日で未回収の請求書（期日の早い順） */
+export const dueThisMonth = (invoices: Invoice[], asOf: string): Invoice[] => dueInMonth(invoices, monthOf(asOf))
+
+/** 基準日の翌月（YYYY-MM） */
+export function nextMonthOf(asOf: string): string {
+  const [y, m] = asOf.split('-').map(Number)
+  const d = new Date(Date.UTC(y, m, 1))
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
 export function change(cur: number, prev: number): number | null {

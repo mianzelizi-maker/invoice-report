@@ -8,6 +8,7 @@ import Overview from './components/Overview'
 import InvoiceList from './components/InvoiceList'
 import ClientView from './components/ClientView'
 import ImportView from './components/ImportView'
+import ReportView from './components/ReportView'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -58,8 +59,10 @@ export default function App() {
             <Overview invoices={invoices} asOf={asOf} />
           ) : view === 'invoices' ? (
             <InvoiceList invoices={invoices} asOf={asOf} />
-          ) : (
+          ) : view === 'clients' ? (
             <ClientView invoices={invoices} asOf={asOf} />
+          ) : (
+            <ReportView invoices={invoices} asOf={asOf} />
           )}
         </main>
       </div>
