@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
@@ -7,11 +7,13 @@ import {
   aging, arAt, byClient, byMonth, change, dueThisMonth, prevMonthEnd, rankByDelay, rankByOverdueAmount, receivable, summarize,
 } from '../lib/aggregate'
 import { dateLabel, num, pct, yen, yenShort } from '../lib/format'
+import ReminderPanel from './ReminderPanel'
 import { Card, Kpi, StatusBadge } from './ui'
 
 const AGING_COLOR = ['#2c3e66', '#c98a1b', '#d9622b', '#c2412d']
 
 export default function Overview({ invoices, asOf }: { invoices: Invoice[]; asOf: string }) {
+  const [reminderOf, setReminderOf] = useState<string | null>(null)
   const d = useMemo(() => {
     const s = summarize(invoices, asOf)
     const clients = byClient(invoices, asOf)
@@ -94,15 +96,32 @@ export default function Overview({ invoices, asOf }: { invoices: Invoice[]; asOf
           ) : (
             <ul className="mt-2 divide-y divide-line">
               {d.urgent.map((c) => (
-                <li key={c.client} className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold">{c.client}</div>
-                    <div className="text-xs text-muted">
-                      遅延中 {c.overdueCount}件 ・ 最大{num(c.maxOverdueDays)}日
-                      {c.hasPartialOverdue && <span className="ml-1 text-amber">・一部入金のうえ遅延</span>}
+                <li key={c.client} className="py-2 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold">{c.client}</div>
+                      <div className="text-xs text-muted">
+                        遅延中 {c.overdueCount}件 ・ 最大{num(c.maxOverdueDays)}日
+                        {c.hasPartialOverdue && <span className="ml-1 text-amber">・一部入金のうえ遅延</span>}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="font-bold text-overdue">{yen(c.overdueAmount)}</span>
+                      <button
+                        type="button"
+                        aria-expanded={reminderOf === c.client}
+                        onClick={() => setReminderOf(reminderOf === c.client ? null : c.client)}
+                        className="rounded border border-line bg-card px-2 py-1 text-xs"
+                      >
+                        {reminderOf === c.client ? '閉じる' : '督促文'}
+                      </button>
                     </div>
                   </div>
-                  <div className="shrink-0 text-right font-bold text-overdue">{yen(c.overdueAmount)}</div>
+                  {reminderOf === c.client && (
+                    <div className="mt-2">
+                      <ReminderPanel client={c.client} invoices={invoices} asOf={asOf} />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
