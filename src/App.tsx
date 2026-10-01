@@ -9,6 +9,7 @@ import InvoiceList from './components/InvoiceList'
 import ClientView from './components/ClientView'
 import ImportView from './components/ImportView'
 import ReportView from './components/ReportView'
+import ReconcileView from './components/ReconcileView'
 import IssueView from './components/IssueView'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -75,6 +76,8 @@ export default function App() {
             <Overview invoices={invoices} asOf={asOf} />
           ) : view === 'invoices' ? (
             <InvoiceList invoices={invoices} asOf={asOf} />
+          ) : view === 'reconcile' ? (
+            <ReconcileView invoices={invoices} onApply={setInvoices} />
           ) : view === 'clients' ? (
             <ClientView invoices={invoices} asOf={asOf} />
           ) : (

@@ -1,4 +1,4 @@
-export type View = 'overview' | 'invoices' | 'clients' | 'report' | 'issue' | 'import'
+export type View = 'overview' | 'invoices' | 'clients' | 'report' | 'reconcile' | 'issue' | 'import'
 
 /** short はスマホの下部タブ用の短い名前。データがなくても使える画面は alwaysOn */
 export const VIEWS: { id: View; label: string; short: string; alwaysOn?: boolean }[] = [
@@ -6,6 +6,7 @@ export const VIEWS: { id: View; label: string; short: string; alwaysOn?: boolean
   { id: 'invoices', label: '請求書一覧', short: '請求書' },
   { id: 'clients', label: '取引先別', short: '取引先' },
   { id: 'report', label: '月次レポート', short: 'レポート' },
+  { id: 'reconcile', label: '入金消込', short: '消込' },
   { id: 'issue', label: '請求書発行', short: '発行', alwaysOn: true },
   { id: 'import', label: 'データ取込', short: '取込', alwaysOn: true },
 ]
