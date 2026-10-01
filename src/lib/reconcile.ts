@@ -1,8 +1,9 @@
 import Papa from 'papaparse'
-import type { Invoice } from '../types'
+import type { Invoice, Payment } from '../types'
 import { receivable } from './aggregate'
 import { normalizeDate, parseYen } from './csv'
 import { normalizeForSearch } from './clientSearch'
+import { paymentHistory } from './status'
 
 /** 銀行の入金明細1行 */
 export type Deposit = { id: number; date: string; payer: string; amount: number }
@@ -141,25 +142,25 @@ export function matchDeposits(deposits: Deposit[], invoices: Invoice[]): Match[]
   return deposits.map((d) => byId.get(d.id)!)
 }
 
-/** 消込を請求データに反映する。入金額を足し、入金日は新しいほうにする */
+/** 消込を請求データに反映する。入金を履歴に1回分として追加し、入金額・最終入金日を更新する */
 export function applyMatches(invoices: Invoice[], matches: Match[]): Invoice[] {
-  const adds = new Map<string, { amount: number; date: string }>()
+  const adds = new Map<string, Payment[]>()
   for (const m of matches) {
     for (const a of m.allocations) {
-      const cur = adds.get(a.invoiceNo)
-      adds.set(a.invoiceNo, {
-        amount: (cur?.amount ?? 0) + a.amount,
-        date: cur && cur.date > m.deposit.date ? cur.date : m.deposit.date,
-      })
+      const list = adds.get(a.invoiceNo) ?? []
+      list.push({ date: m.deposit.date, amount: a.amount })
+      adds.set(a.invoiceNo, list)
     }
   }
   return invoices.map((i) => {
-    const add = adds.get(i.invoiceNo)
-    if (!add) return i
+    const added = adds.get(i.invoiceNo)
+    if (!added) return i
+    const payments = [...paymentHistory(i), ...added].sort((a, b) => a.date.localeCompare(b.date))
     return {
       ...i,
-      paidAmount: i.paidAmount + add.amount,
-      paidDate: i.paidDate && i.paidDate > add.date ? i.paidDate : add.date,
+      payments,
+      paidAmount: payments.reduce((sum, p) => sum + p.amount, 0),
+      paidDate: payments[payments.length - 1].date,
     }
   })
 }

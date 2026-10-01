@@ -1,5 +1,5 @@
 import type { Invoice } from '../types'
-import { AGING_BUCKETS, agingBucket, balance, isOverdue, lateDays, overdueDays, type AgingBucket } from './status'
+import { AGING_BUCKETS, agingBucket, balance, isOverdue, lateDays, overdueDays, paymentHistory, type AgingBucket } from './status'
 
 /** 売掛金として扱う残高。過入金（マイナス残高）は売掛金に含めない */
 export const receivable = (inv: Invoice): number => Math.max(0, balance(inv))
@@ -137,8 +137,8 @@ export function arAt(invoices: Invoice[], date: string): number {
   let total = 0
   for (const inv of invoices) {
     if (inv.issueDate > date) continue
-    const settled = inv.paidDate !== null && inv.paidDate <= date
-    total += settled ? Math.max(0, inv.amount - inv.paidAmount) : inv.amount
+    const paid = paymentHistory(inv).reduce((sum, p) => (p.date <= date ? sum + p.amount : sum), 0)
+    total += Math.max(0, inv.amount - paid)
   }
   return total
 }
@@ -155,7 +155,14 @@ export function byMonth(invoices: Invoice[], asOf: string): MonthRow[] {
   }
   for (const inv of invoices) {
     row(monthOf(inv.issueDate)).billed += inv.amount
-    if (inv.paidDate && inv.paidAmount > 0) row(monthOf(inv.paidDate)).collected += Math.min(inv.paidAmount, inv.amount)
+    // 入金ごとに入金月へ計上する（請求額を超える分は数えない）
+    let counted = 0
+    for (const p of paymentHistory(inv)) {
+      const credit = Math.min(p.amount, inv.amount - counted)
+      if (credit <= 0) continue
+      row(monthOf(p.date)).collected += credit
+      counted += credit
+    }
   }
   const cutoff = monthOf(asOf)
   const result = [...rows.values()].filter((r) => r.month <= cutoff).sort((a, b) => a.month.localeCompare(b.month))

@@ -115,6 +115,23 @@ describe('arAt / byMonth', () => {
     expect(rows.map((r) => r.month)).toEqual(['2026-08', '2026-09'])
     expect(rows[1]).toMatchObject({ billed: 100000, collected: 100000, ar: 100000 })
   })
+  it('分割入金は入金日ごとに、残高と月別の入金額へ反映される', () => {
+    const split = [
+      inv({
+        issueDate: '2026-07-15', dueDate: '2026-08-15', amount: 100000, paidAmount: 100000, paidDate: '2026-09-05',
+        payments: [{ date: '2026-08-20', amount: 30000 }, { date: '2026-09-05', amount: 70000 }],
+      }),
+    ]
+    expect(arAt(split, '2026-08-19')).toBe(100000)
+    expect(arAt(split, '2026-08-31')).toBe(70000)
+    expect(arAt(split, '2026-09-05')).toBe(0)
+    const rows = byMonth(split, '2026-09-30')
+    expect(rows.map((r) => [r.month, r.collected])).toEqual([['2026-07', 0], ['2026-08', 30000], ['2026-09', 70000]])
+  })
+  it('請求額を超える入金は月別の入金額に数えない', () => {
+    const over = [inv({ amount: 100000, paidAmount: 130000, payments: [{ date: '2026-09-01', amount: 100000 }, { date: '2026-09-02', amount: 30000 }] })]
+    expect(byMonth(over, '2026-09-30').find((r) => r.month === '2026-09')!.collected).toBe(100000)
+  })
   it('前月末を返す', () => {
     expect(prevMonthEnd('2026-09-30')).toBe('2026-08-31')
     expect(prevMonthEnd('2026-01-15')).toBe('2025-12-31')

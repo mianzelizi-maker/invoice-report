@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Invoice } from '../types'
+import { paymentHistory } from './status'
 import { applyMatches, findClient, matchDeposits, normalizePayer, parseDeposits } from './reconcile'
 
 const inv = (o: Partial<Invoice>): Invoice => ({
@@ -66,6 +67,22 @@ describe('applyMatches', () => {
     const out = applyMatches(list, matches)
     expect(out[0]).toMatchObject({ paidAmount: 100000, paidDate: '2026-10-05' })
     expect(out[1]).toBe(list[1])
+  })
+})
+
+describe('applyMatches の入金履歴', () => {
+  it('既存の入金を1回目として残し、消込を2回目として履歴に足す', () => {
+    const list = [inv({ paidAmount: 30000, paidDate: '2026-09-01' })]
+    const out = applyMatches(list, matchDeposits([dep(1, 'ﾄｳﾜｹﾝｾﾂ', 70000, '2026-10-05')], list))
+    expect(out[0].payments).toEqual([{ date: '2026-09-01', amount: 30000 }, { date: '2026-10-05', amount: 70000 }])
+    expect(paymentHistory(out[0])).toHaveLength(2)
+  })
+  it('同じ請求書への複数回の消込も、日付順の履歴になる', () => {
+    const list = [inv({})]
+    const ms = [...matchDeposits([dep(1, 'ﾄｳﾜｹﾝｾﾂ', 20000, '2026-10-09')], list), ...matchDeposits([dep(2, 'ﾄｳﾜｹﾝｾﾂ', 10000, '2026-10-02')], list)]
+    const out = applyMatches(list, ms)
+    expect(out[0].payments!.map((p) => p.date)).toEqual(['2026-10-02', '2026-10-09'])
+    expect(out[0]).toMatchObject({ paidAmount: 30000, paidDate: '2026-10-09' })
   })
 })
 

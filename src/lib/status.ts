@@ -1,4 +1,4 @@
-import type { DisplayStatus, Invoice, PaymentStatus } from '../types'
+import type { DisplayStatus, Invoice, Payment, PaymentStatus } from '../types'
 
 const MS_PER_DAY = 86_400_000
 
@@ -11,6 +11,12 @@ export function parseDate(s: string): number {
 /** to - from の日数（to が後なら正） */
 export function daysBetween(from: string, to: string): number {
   return Math.round((parseDate(to) - parseDate(from)) / MS_PER_DAY)
+}
+
+/** 入金の履歴（日付の古い順）。履歴がなければ、paidDate・paidAmount を1回の入金として扱う */
+export function paymentHistory(inv: Invoice): Payment[] {
+  const list = inv.payments ?? (inv.paidAmount > 0 && inv.paidDate ? [{ date: inv.paidDate, amount: inv.paidAmount }] : [])
+  return [...list].sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export const balance = (inv: Invoice): number => inv.amount - inv.paidAmount

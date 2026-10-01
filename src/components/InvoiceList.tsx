@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import type { Invoice } from '../types'
 import { receivable, byClient } from '../lib/aggregate'
 import { dateLabel, num, yen } from '../lib/format'
-import { balance, overdueDays } from '../lib/status'
+import { balance, overdueDays, paymentHistory } from '../lib/status'
 import { Card, StatusBadge, statusKey, td, tdR, th, thR } from './ui'
 
 const ALL = 'all'
@@ -15,6 +15,7 @@ export default function InvoiceList({ invoices, asOf }: { invoices: Invoice[]; a
   const [status, setStatus] = useState(ALL)
   const [client, setClient] = useState(ALL)
   const [sort, setSort] = useState<Sort>('overdue')
+  const [open, setOpen] = useState<Set<string>>(new Set()) // 入金履歴を開いている請求書
 
   const clients = useMemo(() => byClient(invoices, asOf).map((c) => c.client).sort((a, b) => a.localeCompare(b, 'ja')), [invoices, asOf])
 
@@ -30,6 +31,13 @@ export default function InvoiceList({ invoices, asOf }: { invoices: Invoice[]; a
     }
     return [...list].sort(cmp[sort])
   }, [invoices, asOf, status, client, sort])
+
+  const toggle = (key: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(key)) next.add(key)
+      return next
+    })
 
   const totalAr = rows.reduce((s, i) => s + receivable(i), 0)
 
@@ -84,8 +92,11 @@ export default function InvoiceList({ invoices, asOf }: { invoices: Invoice[]; a
             <tbody>
               {rows.map((i) => {
                 const days = overdueDays(i, asOf)
+                const key = i.invoiceNo + i.client
+                const history = paymentHistory(i)
                 return (
-                  <tr key={i.invoiceNo + i.client} className={`border-t border-line ${days > 0 ? 'bg-overdue-soft' : ''}`}>
+                  <Fragment key={key}>
+                  <tr className={`border-t border-line ${days > 0 ? 'bg-overdue-soft' : ''}`}>
                     <td className={`${td} sticky left-0 font-medium ${days > 0 ? 'bg-overdue-soft' : 'bg-card'}`}>{i.client}</td>
                     <td className={td}><StatusBadge invoice={i} asOf={asOf} /></td>
                     <td className={`${tdR} ${days > 0 ? 'font-bold text-overdue' : 'text-muted'}`}>{days > 0 ? `${num(days)}日` : '—'}</td>
@@ -94,8 +105,31 @@ export default function InvoiceList({ invoices, asOf }: { invoices: Invoice[]; a
                     <td className={td}>{i.invoiceNo}</td>
                     <td className={td}>{dateLabel(i.issueDate)}</td>
                     <td className={tdR}>{yen(i.amount)}</td>
-                    <td className={tdR}>{yen(i.paidAmount)}</td>
+                    <td className={tdR}>
+                      {yen(i.paidAmount)}
+                      {history.length >= 2 && (
+                        <button
+                          type="button"
+                          aria-expanded={open.has(key)}
+                          onClick={() => toggle(key)}
+                          className="ml-2 rounded border border-line bg-card px-1.5 py-0.5 text-[10px] text-navy"
+                        >
+                          {history.length}回{open.has(key) ? '▲' : '▼'}
+                        </button>
+                      )}
+                    </td>
                   </tr>
+                  {open.has(key) && (
+                    <tr className="bg-paper text-xs">
+                      <td colSpan={9} className="px-3 py-2">
+                        <span className="font-semibold text-navy">入金履歴：</span>
+                        {history.map((p, n) => (
+                          <span key={n} className="mr-4 whitespace-nowrap">{dateLabel(p.date)} {yen(p.amount)}</span>
+                        ))}
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 )
               })}
               {rows.length === 0 && (
