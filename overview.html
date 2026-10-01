@@ -209,15 +209,15 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
   <header class="masthead">
     <div class="eyebrow">PROJECT OVERVIEW</div>
     <h1 class="doc-title">請求・入金管理レポート<br>開発概要</h1>
-    <p class="doc-sub">中小企業の経理向けに、請求書のCSVを取り込むだけで、入金状況の判定・売掛金の見える化・月次レポート・請求書PDFの発行までを行うWebアプリ。ログインやデータベースは不要で、ブラウザだけで動きます。企画・設計・実装・テスト・公開までを個人開発として行いました。</p>
+    <p class="doc-sub">中小企業の経理向けに、請求書のCSVを取り込むだけで、入金状況の判定・売掛金の見える化・督促文の下書き・入金消込・月次レポート・請求書PDFの発行までを行うWebアプリ。ログインやデータベースは不要で、ブラウザだけで動きます。企画・設計・実装・テスト・公開までを個人開発として行いました。</p>
     <div class="meta-row">
       <div class="meta-item">
         <div class="label">ステータス</div>
-        <div class="value"><span class="status-pill">全機能実装済み・自動テスト130件</span></div>
+        <div class="value"><span class="status-pill">全機能実装済み・自動テスト151件</span></div>
       </div>
       <div class="meta-item">
         <div class="label">開発期間</div>
-        <div class="value">2026年9月</div>
+        <div class="value">2026年9月30日〜10月1日<br>(実稼働 約8時間)</div>
       </div>
       <div class="meta-item">
         <div class="label">開発形態</div>
@@ -258,6 +258,16 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
         <span class="to">直して読み込み直す</span>
       </div>
       <div class="flow-branch">
+        <span class="tag">遅延中の取引先</span>
+        <span>未入金の請求書から →</span>
+        <span class="to">督促メールの下書き（遅延日数で3段階）</span>
+      </div>
+      <div class="flow-branch">
+        <span class="tag">入金明細CSV</span>
+        <span>振込名義を取引先に照合 →</span>
+        <span class="to">確認した分だけ消込・履歴に反映</span>
+      </div>
+      <div class="flow-branch">
         <span class="tag">月次レポート</span>
         <span>集計結果から文章を作成 →</span>
         <span class="to">AI生成（上限つき）</span>
@@ -281,6 +291,14 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
       <div class="feature-card">
         <div class="k">ダッシュボード</div>
         <div class="v">売掛金残高・今月の回収予定・遅延額・回収率、年齢別残高、月別推移をグラフで表示。「回収を急ぐべき取引先」と「支払いが遅れがちな取引先」を別々に提示。PCは左サイドバー、スマホは下部タブ。</div>
+      </div>
+      <div class="feature-card">
+        <div class="k">督促メールの下書き</div>
+        <div class="v">遅延中の請求書（番号・期日・未入金額）を差し込んだ督促文を作成。最も遅れている請求書の遅延日数で、初回・再度・最終の3段階に文面が変わり、編集してコピーできる。</div>
+      </div>
+      <div class="feature-card">
+        <div class="k">入金消込・分割入金の履歴</div>
+        <div class="v">銀行の入金明細CSVを請求書と突き合わせ、一致／一部入金／複数の請求書に充当／要確認を判定。半角カナ・「(カ」付きの振込名義にも対応し、確認した分だけを反映して入金履歴に残す。</div>
       </div>
       <div class="feature-card">
         <div class="k">月次レポート</div>
@@ -310,8 +328,9 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
       <span class="stack-chip">Claude API(Haiku 4.5・AI生成用)</span>
       <span class="stack-chip">Vercel Functions(AI生成用)</span>
       <span class="stack-chip">Upstash Redis(利用回数の記録)</span>
-      <span class="stack-chip">Vitest(自動テスト130件)</span>
+      <span class="stack-chip">Vitest(自動テスト151件)</span>
       <span class="stack-chip">GitHub / GitHub Pages</span>
+      <span class="stack-chip">GitHub Actions(自動公開)</span>
     </div>
   </section>
 
@@ -335,6 +354,14 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
       <div class="title">請求書の計算を実務の考え方に合わせ、数字の違和感は原因まで切り分け</div>
       <p>消費税は税率ごとの合計に対して1回だけ円未満を切り捨て（明細ごとに丸めると1円ずれる例をテスト化）。また、サンプルの2社で遅延の数字が同じに見えた際は、計算ではなくサンプルデータの設定（基準日とのずれ）が原因だと突き止めて修正し、意図した傾向をテストに固定しました。</p>
     </div>
+    <div class="episode">
+      <div class="title">入金の自動照合は確定させず、人が確認してから反映</div>
+      <p>銀行の振込名義は半角カナで、「(カ」「カ)」が付き、途中で切れることもあります。表記ゆれを吸収して取引先に照合し、残高と一致するもの、一部入金、複数の請求書にまたがるもの、取引先が不明なものを区別して表示。要確認は自動では反映せず、チェックした分だけを入金履歴として残す形にしました。同じ請求書に二重に充当しないことも、テストで確認しています。</p>
+    </div>
+    <div class="episode">
+      <div class="title">公開と運用を、使う人の迷いと個人情報の観点から見直し</div>
+      <p>Vercelにログインできなかったため公開先をGitHub Pagesに変更し、のちにGitHub Actionsで、テスト・ビルド・公開を自動化（テストが失敗したときは公開しない）。公開前にはコミット履歴を書き換えて個人のメールアドレスを除きました。初めて開く人がメニューを押せずに迷わないよう、サンプルデータは最初から読み込んでおきます。</p>
+    </div>
   </section>
 
   <section class="block">
@@ -343,13 +370,13 @@ footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border
       <span class="callout-label">現状評価と今後の計画</span>
       <p>ログインやデータベースを持たない構成は、公開や試用が手軽な一方、次の制約があります。</p>
       <ul>
-        <li>データはブラウザの中だけで扱い、再読み込みで消える（発行元の情報と発行履歴のみ、このブラウザに保存）</li>
-        <li>入金は1請求書につき1回分で、分割入金の履歴は持てない</li>
+        <li>データはブラウザの中だけで扱い、再読み込みでサンプルに戻る（発行元の情報と発行履歴のみ、このブラウザに保存）</li>
+        <li>分割入金の履歴は入金消込で作られ、請求書CSVからは取り込めない</li>
         <li>請求書は適格請求書の主な記載事項を備えるが、あらゆる書式要件を網羅したものではない</li>
         <li>現在の公開版（GitHub Pages）は静的サイトのため、AI生成は使わず「自動集計」の文章のみ（AI生成用のサーバー側の仕組みは実装済み）</li>
         <li>AI生成の文章は誤りを含む可能性があり、数値は集計と照合する前提。数万件を超える大量データは未検証</li>
       </ul>
-      <p>今後は、ログインとデータベースによる複数人・複数端末での利用、分割入金と入金の消込、督促メール文面の下書き、会計ソフトや銀行データとの連携、請求書の履歴管理と再発行を検討しています。</p>
+      <p>今後は、ログインとデータベースによる複数人・複数端末での利用、入金履歴のCSV取り込み、督促文のAIによる調整、会計ソフトや銀行データとの連携、請求書の履歴管理と再発行を検討しています。</p>
     </div>
   </section>
 
