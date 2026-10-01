@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Invoice } from './types'
 import { SAMPLE_AS_OF, loadSample } from './lib/csv'
 import { BottomNav, Sidebar, type View } from './components/Nav'
@@ -36,6 +36,12 @@ export default function App() {
       setLoading(false)
     }
   }
+
+  // 初めて開いた人がメニューを押せずに迷わないよう、最初からサンプルデータを読み込んでおく
+  // （失敗したときは、従来どおり空の画面とエラー表示になる）
+  useEffect(() => {
+    void handleSample(false)
+  }, [])
 
   // CSVを取り込んだら、今日を基準日にして概要画面へ
   const handleImport = (data: Invoice[], label: string) => {
