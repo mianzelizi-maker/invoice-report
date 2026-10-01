@@ -1,0 +1,32 @@
+name: Deploy to GitHub Pages
+
+# main に push したら、テスト → ビルド → gh-pages ブランチへ公開 まで自動で行う。
+# （手元の `npm run deploy:pages` と同じ方法。テストが失敗したときは公開しない）
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # gh-pages ブランチへ push するため
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Set commit author
+        run: |
+          git config --global user.name "ota"
+          git config --global user.email "317437831+mianzelizi-maker@users.noreply.github.com"
+      - run: npm run deploy:pages
