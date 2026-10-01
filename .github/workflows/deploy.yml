@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 
 # main に push したら、テスト → ビルド → gh-pages ブランチへ公開 まで自動で行う。
-# （手元の `npm run deploy:pages` と同じ方法。テストが失敗したときは公開しない）
+# （手元の `npm run deploy:pages` と同じ内容。テストが失敗したときは公開しない）
 on:
   push:
     branches: [main]
@@ -29,4 +29,9 @@ jobs:
         run: |
           git config --global user.name "ota"
           git config --global user.email "317437831+mianzelizi-maker@users.noreply.github.com"
-      - run: npm run deploy:pages
+      - run: npm run build:pages
+      # gh-pages は別の場所へ clone するため、Actions のトークンを公開先のURLに直接渡す
+      - name: Publish to gh-pages branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx gh-pages -d dist -t -m "Deploy to GitHub Pages" -r "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
