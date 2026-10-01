@@ -153,7 +153,7 @@ npm run deploy:pages
 4. 1〜2分待つと、Pages の画面の上部に公開URLが表示される。このアプリの場合は `https://あなたのユーザー名.github.io/invoice-report/` になる
 5. 開発概要ページも、同じ場所の `overview.html` で公開される（`https://あなたのユーザー名.github.io/invoice-report/overview.html`）
 
-**内容を更新したとき**は、変更を `git push` したあとに、もう一度 `npm run deploy:pages` を実行すると、公開内容が入れ替わります。
+**内容を更新したとき**は、変更を `git push` するだけです。GitHub Actions（`.github/workflows/deploy.yml`）が、テスト → 公開用ビルド → `gh-pages` ブランチへの送信を自動で行います（テストが失敗したときは公開されません）。手元から公開したいときは、`npm run deploy:pages` でも同じことができます。
 
 > `npm run deploy:pages` は、`--base=/invoice-report/` を付けて公開用にビルドし（サイトが `…/invoice-report/` という場所にあるため）、
 > 開発概要ページなどを加えたうえで、`gh-pages` ブランチへ送ります（`package.json` の `build:pages`・`deploy:pages` を参照）。
