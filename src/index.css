@@ -3,7 +3,7 @@
 /* 配色：深い藍 × 生成り。アクセントは 琥珀（注意）・朱赤（遅延）・緑（入金済み） */
 @theme {
   --color-paper: #f7f3ea;
-  --color-card: #fffdf8;
+  --color-card: #ffffff;
   --color-ink: #1d2433;
   --color-muted: #6f7686;
   --color-line: #e6dfcf;
@@ -16,7 +16,7 @@
 }
 
 body {
-  background: var(--color-paper);
+  background: #ffffff;
   color: var(--color-ink);
   font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
 }
